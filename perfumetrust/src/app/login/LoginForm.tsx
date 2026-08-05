@@ -29,7 +29,17 @@ export function LoginForm() {
     setError(null);
     setLoading(true);
 
-    const options = { data: { full_name: fullName || undefined } };
+    const next = searchParams.get("next") ?? "/";
+    const options =
+      method === "phone"
+        ? { data: { full_name: fullName || undefined } }
+        : {
+            data: { full_name: fullName || undefined },
+            // Sem isso, o Supabase usa a "Site URL" padrão como destino do
+            // link do e-mail e ignora nossa rota /auth/callback — o clique
+            // no link volta pro site, mas sem sessão criada.
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+          };
     const { error } =
       method === "phone"
         ? await supabase.auth.signInWithOtp({ phone: normalizePhone(phone), options })
@@ -147,8 +157,16 @@ export function LoginForm() {
       {step === "verify" && (
         <form onSubmit={handleVerifyCode} className="space-y-3">
           <p className="text-sm text-ink-300">
-            Enviamos um código para {method === "phone" ? normalizePhone(phone) : email}.
+            Enviamos {method === "phone" ? "um código" : "um e-mail de confirmação"} para{" "}
+            {method === "phone" ? normalizePhone(phone) : email}.
           </p>
+          {method === "email" && (
+            <p className="rounded-lg border border-gold-400/20 bg-gold-400/5 p-2.5 text-xs leading-relaxed text-ink-300">
+              Mais fácil: abra o e-mail e clique no link &ldquo;Entrar&rdquo; — isso já faz login
+              direto, sem precisar digitar nada aqui. O campo abaixo só funciona se o código
+              aparecer no corpo do e-mail.
+            </p>
+          )}
           <input
             value={code}
             onChange={(e) => setCode(e.target.value)}
