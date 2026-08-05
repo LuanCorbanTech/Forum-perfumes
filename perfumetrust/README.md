@@ -1,4 +1,4 @@
-# PerfumeTrust
+# Cheiro Novo
 
 MVP de uma plataforma de reputação para grupos brasileiros de desapego de
 perfumes usados. Permite que compradores verifiquem a reputação de um
