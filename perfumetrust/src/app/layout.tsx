@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Jost, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { TopBanner } from "@/components/TopBanner";
+import { PerfumeMarquee } from "@/components/PerfumeMarquee";
 import { Footer } from "@/components/Footer";
 
 const displayFont = Cormorant_Garamond({
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body className="min-h-screen bg-ink-900 font-sans font-light text-ink-100 antialiased">
         <TopBanner />
+        <PerfumeMarquee />
         <Navbar />
         <main className="mx-auto max-w-6xl px-4 py-10 sm:px-7">{children}</main>
         <Footer />
