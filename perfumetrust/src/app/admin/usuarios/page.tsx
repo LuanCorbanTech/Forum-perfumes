@@ -28,23 +28,23 @@ export default async function AdminUsuariosPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Usuários</h1>
+      <h1 className="font-serif text-2xl font-light text-ink-50">Usuários</h1>
 
       <form className="flex gap-2">
         <input
           name="q"
           defaultValue={q}
           placeholder="Buscar por nome ou telefone..."
-          className="flex-1 rounded-lg border border-gray-300 p-2 text-sm"
+          className="flex-1 rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-sm text-ink-50 placeholder-ink-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
         />
-        <button className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
+        <button className="rounded-lg bg-gold-500 px-4 py-2 text-sm font-medium text-ink-950 transition hover:bg-gold-400">
           Buscar
         </button>
       </form>
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-ink-700 bg-ink-800/60">
         <table className="w-full text-sm">
-          <thead className="border-b border-gray-100 bg-gray-50 text-left text-xs uppercase text-gray-500">
+          <thead className="border-b border-ink-700 bg-ink-900/40 text-left text-xs uppercase text-ink-400">
             <tr>
               <th className="px-4 py-3">Nome</th>
               <th className="px-4 py-3">Telefone</th>
@@ -56,23 +56,23 @@ export default async function AdminUsuariosPage({ searchParams }: Props) {
           </thead>
           <tbody>
             {(users ?? []).map((user) => (
-              <tr key={user.id} className="border-b border-gray-50 last:border-0">
+              <tr key={user.id} className="border-b border-ink-700/60 last:border-0">
                 <td className="px-4 py-3">
-                  <Link href={`/perfil/${user.id}`} className="font-medium text-brand-700 hover:underline">
+                  <Link href={`/perfil/${user.id}`} className="font-medium text-gold-300 hover:underline">
                     {user.full_name}
                   </Link>
                   {user.is_admin && (
-                    <span className="ml-2 rounded bg-brand-100 px-1.5 py-0.5 text-xs text-brand-700">admin</span>
+                    <span className="ml-2 rounded bg-gold-400/10 px-1.5 py-0.5 text-xs text-gold-300">admin</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-gray-500">{user.phone ?? "—"}</td>
-                <td className="px-4 py-3">{user.trust_score}</td>
-                <td className="px-4 py-3">{user.completed_sales_count}</td>
+                <td className="px-4 py-3 text-ink-400">{user.phone ?? "—"}</td>
+                <td className="px-4 py-3 text-ink-100">{user.trust_score}</td>
+                <td className="px-4 py-3 text-ink-100">{user.completed_sales_count}</td>
                 <td className="px-4 py-3">
                   {user.is_banned ? (
-                    <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Banido</span>
+                    <span className="rounded bg-red-400/10 px-2 py-0.5 text-xs font-medium text-red-300">Banido</span>
                   ) : (
-                    <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Ativo</span>
+                    <span className="rounded bg-emerald-400/10 px-2 py-0.5 text-xs font-medium text-emerald-300">Ativo</span>
                   )}
                 </td>
                 <td className="px-4 py-3">

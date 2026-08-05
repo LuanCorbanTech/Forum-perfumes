@@ -56,6 +56,7 @@ create table if not exists public.profiles (
   bio                    text,
   city                   text,
   state                  text,
+  brands                 text[] not null default '{}',  -- marcas que costuma vender (filtro no feed)
 
   -- métricas de reputação (desnormalizadas para leitura rápida do perfil público)
   average_rating           numeric(3,2) not null default 0,   -- 0.00 a 5.00
@@ -82,6 +83,7 @@ comment on table public.profiles is 'Perfil público de compradores/vendedores d
 
 create index if not exists idx_profiles_phone on public.profiles using btree (phone);
 create index if not exists idx_profiles_full_name_trgm on public.profiles using gin (full_name gin_trgm_ops);
+create index if not exists idx_profiles_brands on public.profiles using gin (brands);
 
 -- ---------------------------------------------------------------------
 -- TRANSACTIONS — negociação entre comprador e vendedor

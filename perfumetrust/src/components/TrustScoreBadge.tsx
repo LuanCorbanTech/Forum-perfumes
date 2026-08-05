@@ -16,8 +16,8 @@ export function TrustScoreBadge({ score, reviewsCount }: TrustScoreBadgeProps) {
       >
         {copy.label}
       </span>
-      <span className="text-sm text-gray-500">
-        Score: <span className="font-semibold text-gray-800">{score}</span>/100
+      <span className="text-sm text-ink-300">
+        Score: <span className="font-semibold text-ink-100">{score}</span>/100
       </span>
     </div>
   );

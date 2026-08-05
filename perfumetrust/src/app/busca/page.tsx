@@ -1,6 +1,7 @@
 import { SearchBar } from "@/components/SearchBar";
 import { SellerCard } from "@/components/SellerCard";
 import { createClient } from "@/lib/supabase/server";
+import { isVerifiedSeller } from "@/lib/trustScore";
 import type { Profile } from "@/lib/types";
 
 interface Props {
@@ -33,23 +34,23 @@ export default async function BuscaPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Buscar vendedor</h1>
+      <h1 className="font-serif text-2xl font-light text-ink-50">Buscar vendedor</h1>
       <SearchBar />
 
       {q ? (
         results.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {results.map((profile) => (
-              <SellerCard key={profile.id} profile={profile} />
+              <SellerCard key={profile.id} profile={profile} verified={isVerifiedSeller(profile)} />
             ))}
           </div>
         ) : (
-          <p className="text-gray-500">
+          <p className="text-ink-300">
             Nenhum vendedor encontrado para &quot;{q}&quot;. Verifique o nome ou telefone informado.
           </p>
         )
       ) : (
-        <p className="text-gray-500">Digite um nome ou telefone para começar a busca.</p>
+        <p className="text-ink-300">Digite um nome ou telefone para começar a busca.</p>
       )}
     </div>
   );

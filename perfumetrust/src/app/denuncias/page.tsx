@@ -4,10 +4,10 @@ import { REPORT_REASON_LABELS, type Report } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  pending: { label: "Pendente", className: "bg-yellow-100 text-yellow-800" },
-  under_review: { label: "Em análise", className: "bg-blue-100 text-blue-800" },
-  approved: { label: "Procedente", className: "bg-green-100 text-green-800" },
-  rejected: { label: "Improcedente", className: "bg-gray-100 text-gray-700" },
+  pending: { label: "Pendente", className: "bg-yellow-400/10 text-yellow-300" },
+  under_review: { label: "Em análise", className: "bg-blue-400/10 text-blue-300" },
+  approved: { label: "Procedente", className: "bg-emerald-400/10 text-emerald-300" },
+  rejected: { label: "Improcedente", className: "bg-ink-600/40 text-ink-300" },
 };
 
 export default async function MinhasDenunciasPage() {
@@ -26,27 +26,27 @@ export default async function MinhasDenunciasPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Minhas denúncias</h1>
+      <h1 className="font-serif text-2xl font-light text-ink-50">Minhas denúncias</h1>
 
       {reports && reports.length > 0 ? (
         <ul className="space-y-3">
           {reports.map((report) => (
-            <li key={report.id} className="rounded-lg border border-gray-200 bg-white p-4">
+            <li key={report.id} className="rounded-lg border border-ink-700 bg-ink-800/60 p-4">
               <div className="flex items-center justify-between">
-                <Link href={`/perfil/${report.reported_id}`} className="font-medium text-brand-700 hover:underline">
+                <Link href={`/perfil/${report.reported_id}`} className="font-medium text-gold-300 hover:underline">
                   {report.reported?.full_name ?? "Usuário"}
                 </Link>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_LABELS[report.status].className}`}>
                   {STATUS_LABELS[report.status].label}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-gray-500">{REPORT_REASON_LABELS[report.reason]}</p>
-              <p className="mt-1 text-sm text-gray-700">{report.description}</p>
+              <p className="mt-1 text-sm text-ink-400">{REPORT_REASON_LABELS[report.reason]}</p>
+              <p className="mt-1 text-sm text-ink-200">{report.description}</p>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-gray-500">Você ainda não enviou nenhuma denúncia.</p>
+        <p className="text-ink-400">Você ainda não enviou nenhuma denúncia.</p>
       )}
     </div>
   );

@@ -49,27 +49,27 @@ export function ReportForm({ reportedId, reportedName, transactionId, currentUse
 
   if (success) {
     return (
-      <p className="rounded-lg bg-green-50 p-4 text-sm text-green-700">
+      <p className="rounded-lg bg-emerald-400/10 p-4 text-sm text-emerald-300">
         Denúncia enviada. Nossa equipe irá analisar em breve.
       </p>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-gray-200 p-4">
-      <p className="font-medium text-gray-800">Denunciar {reportedName}</p>
+    <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-ink-700 bg-ink-800/60 p-4">
+      <p className="font-medium text-ink-100">Denunciar {reportedName}</p>
 
-      {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+      {error && <p className="rounded bg-red-400/10 p-2 text-sm text-red-300">{error}</p>}
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Motivo</label>
+        <label className="mb-1 block text-sm font-medium text-ink-200">Motivo</label>
         <select
           value={reason}
           onChange={(e) => setReason(e.target.value as ReportReason)}
-          className="w-full rounded-lg border border-gray-300 p-2 text-sm"
+          className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-sm text-ink-50 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
         >
           {Object.entries(REPORT_REASON_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
+            <option key={value} value={value} className="bg-ink-800 text-ink-50">
               {label}
             </option>
           ))}
@@ -77,12 +77,12 @@ export function ReportForm({ reportedId, reportedName, transactionId, currentUse
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Descrição</label>
+        <label className="mb-1 block text-sm font-medium text-ink-200">Descrição</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Descreva o que aconteceu com o máximo de detalhes possível..."
-          className="w-full rounded-lg border border-gray-300 p-2 text-sm"
+          className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-sm text-ink-50 placeholder-ink-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
           rows={4}
         />
       </div>
@@ -90,7 +90,7 @@ export function ReportForm({ reportedId, reportedName, transactionId, currentUse
       <button
         type="submit"
         disabled={loading}
-        className="rounded-lg bg-red-600 px-4 py-2 font-medium text-white disabled:opacity-50 hover:bg-red-700"
+        className="rounded-lg bg-red-500/90 px-4 py-2 font-medium text-white transition disabled:opacity-50 hover:bg-red-500"
       >
         Enviar denúncia
       </button>

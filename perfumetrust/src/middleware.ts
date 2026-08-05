@@ -31,8 +31,10 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // Compara por segmento de rota (não por substring): "/conta" deve
+  // proteger "/conta" e "/conta/x", mas não páginas como "/contato".
   const protectedPrefixes = ["/transacoes", "/denuncias", "/admin", "/conta"];
-  const isProtected = protectedPrefixes.some((p) => pathname.startsWith(p));
+  const isProtected = protectedPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (isProtected && !user) {
     const redirectUrl = new URL("/login", request.url);
@@ -40,7 +42,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (pathname.startsWith("/admin") && user) {
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+  if (isAdminRoute && user) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("is_admin")

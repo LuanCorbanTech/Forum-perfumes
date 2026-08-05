@@ -58,13 +58,13 @@ export function RecommendButton({ recommendedId, currentUserId, initiallyRecomme
         disabled={loading}
         className={`rounded-lg border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
           recommended
-            ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
-            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+            ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/20"
+            : "border-ink-600 bg-ink-900/40 text-ink-200 hover:border-gold-400/40 hover:text-gold-200"
         }`}
       >
         {recommended ? "✓ Você recomenda" : "👍 Recomendar este vendedor"}
       </button>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs text-red-300">{error}</p>}
     </div>
   );
 }

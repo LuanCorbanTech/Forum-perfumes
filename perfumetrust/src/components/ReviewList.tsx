@@ -5,7 +5,7 @@ import type { Review } from "@/lib/types";
 export function ReviewList({ reviews }: { reviews: Review[] }) {
   if (reviews.length === 0) {
     return (
-      <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-gray-500">
+      <p className="rounded-lg border border-dashed border-ink-600 p-6 text-center text-ink-300">
         Este vendedor ainda não recebeu avaliações.
       </p>
     );
@@ -14,17 +14,17 @@ export function ReviewList({ reviews }: { reviews: Review[] }) {
   return (
     <ul className="space-y-4">
       {reviews.map((review) => (
-        <li key={review.id} className="rounded-lg border border-gray-200 bg-white p-4">
+        <li key={review.id} className="rounded-lg border border-ink-700 bg-ink-800/60 p-4">
           <div className="flex items-center justify-between">
-            <span className="font-medium text-gray-900">
+            <span className="font-medium text-ink-50">
               {review.reviewer?.full_name ?? "Usuário"}
             </span>
-            <span className="text-xs text-gray-400">{timeAgo(review.created_at)}</span>
+            <span className="text-xs text-ink-400">{timeAgo(review.created_at)}</span>
           </div>
           <div className="mt-1">
             <StarRating rating={review.rating} showNumber={false} size="sm" />
           </div>
-          {review.comment && <p className="mt-2 text-sm text-gray-600">{review.comment}</p>}
+          {review.comment && <p className="mt-2 text-sm text-ink-200">{review.comment}</p>}
         </li>
       ))}
     </ul>

@@ -13,12 +13,21 @@ export function getTrustLevel(score: number, reviewsCount: number): TrustLevel {
 }
 
 export const TRUST_LEVEL_COPY: Record<TrustLevel, { label: string; className: string }> = {
-  alto: { label: "Alta confiabilidade", className: "bg-green-100 text-green-800 border-green-300" },
-  medio: { label: "Confiabilidade média", className: "bg-yellow-100 text-yellow-800 border-yellow-300" },
-  baixo: { label: "Baixa confiabilidade", className: "bg-red-100 text-red-800 border-red-300" },
-  novo: { label: "Vendedor novo", className: "bg-gray-100 text-gray-700 border-gray-300" },
+  alto: { label: "Alta confiabilidade", className: "bg-emerald-400/10 text-emerald-300 border-emerald-400/30" },
+  medio: { label: "Confiabilidade média", className: "bg-gold-400/10 text-gold-300 border-gold-400/30" },
+  baixo: { label: "Baixa confiabilidade", className: "bg-red-400/10 text-red-300 border-red-400/30" },
+  novo: { label: "Vendedor novo", className: "bg-ink-500/20 text-ink-200 border-ink-400/30" },
 };
 
 export function formatRating(rating: number): string {
   return rating.toFixed(1).replace(".", ",");
+}
+
+// Selo "✓ verificado" exibido nos cards: um jeito simples e honesto de
+// destacar quem já tem um histórico real de vendas concluídas na
+// plataforma — não é uma checagem de identidade nem do frasco em si.
+const VERIFIED_MIN_SALES = 3;
+
+export function isVerifiedSeller(profile: { completed_sales_count: number; is_banned: boolean }): boolean {
+  return !profile.is_banned && profile.completed_sales_count >= VERIFIED_MIN_SALES;
 }

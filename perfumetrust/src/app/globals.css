@@ -4,5 +4,30 @@
 
 html,
 body {
-  background-color: #f9fafb;
+  background-color: #131211; /* ink-900 */
+}
+
+::selection {
+  background-color: #c8a86b; /* gold-500 */
+  color: #131211;
+}
+
+a {
+  text-decoration: none;
+}
+
+/* Scrollbar discreta, combinando com o tema escuro */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #131211; /* ink-900 */
+}
+::-webkit-scrollbar-thumb {
+  background: #322f2a; /* ink-600 */
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6f6860; /* ink-500 */
 }

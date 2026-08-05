@@ -30,6 +30,7 @@ export interface Profile {
   bio: string | null;
   city: string | null;
   state: string | null;
+  brands: string[];
   average_rating: number;
   reviews_count: number;
   completed_sales_count: number;
@@ -92,6 +93,18 @@ export interface Recommendation {
   recommended_id: string;
   created_at: string;
 }
+
+// Marcas usadas nas abas de filtro do feed e na seleção do perfil.
+// É só uma lista de conveniência — o campo profiles.brands aceita texto livre.
+export const BRAND_LIST = [
+  "Amouage",
+  "Creed",
+  "Dior",
+  "Maison Francis Kurkdjian",
+  "Nishane",
+  "Tom Ford",
+  "Xerjoff",
+] as const;
 
 export const REPORT_REASON_LABELS: Record<ReportReason, string> = {
   golpe: "Golpe / fraude",

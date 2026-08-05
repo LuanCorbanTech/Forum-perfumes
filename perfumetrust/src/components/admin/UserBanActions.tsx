@@ -31,12 +31,12 @@ export function UserBanActions({ userId, isBanned }: { userId: string; isBanned:
 
   return (
     <div>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-red-300">{error}</p>}
       <button
         onClick={toggleBan}
         disabled={loading}
-        className={`rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
-          isBanned ? "bg-green-600 text-white hover:bg-green-700" : "bg-red-600 text-white hover:bg-red-700"
+        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
+          isBanned ? "bg-emerald-500/90 text-white hover:bg-emerald-500" : "bg-red-500/90 text-white hover:bg-red-500"
         }`}
       >
         {isBanned ? "Desbanir" : "Banir usuário"}

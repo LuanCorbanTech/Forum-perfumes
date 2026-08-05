@@ -15,7 +15,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Painel administrativo</h1>
+      <h1 className="font-serif text-2xl font-light text-ink-50">Painel administrativo</h1>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Metric label="Denúncias pendentes" value={pendingReports ?? 0} highlight />
@@ -27,13 +27,13 @@ export default async function AdminDashboardPage() {
       <div className="flex gap-4">
         <Link
           href="/admin/denuncias"
-          className="rounded-lg bg-brand-600 px-4 py-2 font-medium text-white hover:bg-brand-700"
+          className="rounded-lg bg-gold-500 px-4 py-2 font-medium text-ink-950 transition hover:bg-gold-400"
         >
           Revisar denúncias
         </Link>
         <Link
           href="/admin/usuarios"
-          className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50"
+          className="rounded-lg border border-ink-600 px-4 py-2 font-medium text-ink-200 transition hover:bg-ink-800"
         >
           Gerenciar usuários
         </Link>
@@ -44,9 +44,13 @@ export default async function AdminDashboardPage() {
 
 function Metric({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
   return (
-    <div className={`rounded-xl border p-4 ${highlight && value > 0 ? "border-red-300 bg-red-50" : "border-gray-200 bg-white"}`}>
-      <p className="text-xs uppercase tracking-wide text-gray-400">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${highlight && value > 0 ? "text-red-700" : "text-gray-900"}`}>{value}</p>
+    <div
+      className={`rounded-xl border p-4 ${
+        highlight && value > 0 ? "border-red-400/30 bg-red-400/10" : "border-ink-700 bg-ink-800/60"
+      }`}
+    >
+      <p className="text-xs uppercase tracking-wide text-ink-400">{label}</p>
+      <p className={`mt-1 text-2xl font-bold ${highlight && value > 0 ? "text-red-300" : "text-ink-50"}`}>{value}</p>
     </div>
   );
 }

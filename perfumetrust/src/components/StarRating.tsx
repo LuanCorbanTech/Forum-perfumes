@@ -18,22 +18,22 @@ export function StarRating({ rating, reviewsCount, size = "md", showNumber = tru
 
   return (
     <div className={`flex items-center gap-1 ${SIZE_CLASS[size]}`} aria-label={`Nota ${rating} de 5`}>
-      <div className="flex text-amber-400" aria-hidden="true">
+      <div className="flex text-gold-400" aria-hidden="true">
         {Array.from({ length: 5 }).map((_, i) => {
           const filled = i + 1 <= rounded;
           const half = !filled && i + 0.5 === rounded;
           return (
-            <span key={i} className="relative">
+            <span key={i} className={`relative ${!filled && !half ? "text-ink-500" : ""}`}>
               {half ? "★" : filled ? "★" : "☆"}
             </span>
           );
         })}
       </div>
       {showNumber && (
-        <span className="font-medium text-gray-700">
+        <span className="font-medium text-ink-100">
           {formatRating(rating)}
           {typeof reviewsCount === "number" && (
-            <span className="text-gray-400 font-normal"> ({reviewsCount})</span>
+            <span className="font-normal text-ink-400"> ({reviewsCount})</span>
           )}
         </span>
       )}

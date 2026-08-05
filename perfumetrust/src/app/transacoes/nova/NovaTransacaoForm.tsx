@@ -95,22 +95,22 @@ export function NovaTransacaoForm() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      <h1 className="text-2xl font-bold">Registrar transação</h1>
-      <p className="text-sm text-gray-500">
+      <h1 className="font-serif text-2xl font-light text-ink-50">Registrar transação</h1>
+      <p className="text-sm text-ink-300">
         Registre aqui a negociação combinada no grupo de desapego. Depois, ambos os lados
         confirmam a conclusão para liberar a avaliação.
       </p>
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-gray-200 bg-white p-5">
+      <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-ink-700 bg-ink-800/60 p-5">
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Vendedor</label>
+          <label className="mb-1 block text-sm font-medium text-ink-200">Vendedor</label>
           {seller ? (
-            <div className="flex items-center justify-between rounded-lg border border-gray-300 p-2 text-sm">
+            <div className="flex items-center justify-between rounded-lg border border-ink-600 p-2 text-sm text-ink-50">
               <span>{seller.full_name}</span>
               <button
                 type="button"
                 onClick={() => setSeller(null)}
-                className="text-xs text-gray-400 hover:text-red-600"
+                className="text-xs text-ink-400 hover:text-red-300"
               >
                 trocar
               </button>
@@ -121,10 +121,10 @@ export function NovaTransacaoForm() {
                 value={sellerQuery}
                 onChange={(e) => setSellerQuery(e.target.value)}
                 placeholder="Buscar vendedor por nome..."
-                className="w-full rounded-lg border border-gray-300 p-2 text-sm"
+                className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-sm text-ink-50 placeholder-ink-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
               />
               {sellerOptions.length > 0 && (
-                <ul className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
+                <ul className="absolute z-10 mt-1 w-full rounded-lg border border-ink-600 bg-ink-800 shadow-lg">
                   {sellerOptions.map((opt) => (
                     <li key={opt.id}>
                       <button
@@ -134,7 +134,7 @@ export function NovaTransacaoForm() {
                           setSellerQuery("");
                           setSellerOptions([]);
                         }}
-                        className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
+                        className="block w-full px-3 py-2 text-left text-sm text-ink-100 hover:bg-ink-700"
                       >
                         {opt.full_name}
                       </button>
@@ -147,33 +147,33 @@ export function NovaTransacaoForm() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Item negociado</label>
+          <label className="mb-1 block text-sm font-medium text-ink-200">Item negociado</label>
           <input
             value={itemDescription}
             onChange={(e) => setItemDescription(e.target.value)}
             placeholder="Ex: Perfume XPTO 100ml, 80% do frasco"
             required
-            className="w-full rounded-lg border border-gray-300 p-2 text-sm"
+            className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-sm text-ink-50 placeholder-ink-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Valor combinado (R$)</label>
+          <label className="mb-1 block text-sm font-medium text-ink-200">Valor combinado (R$)</label>
           <input
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             placeholder="150,00"
             required
-            className="w-full rounded-lg border border-gray-300 p-2 text-sm"
+            className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-sm text-ink-50 placeholder-ink-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
           />
         </div>
 
-        {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+        {error && <p className="rounded bg-red-400/10 p-2 text-sm text-red-300">{error}</p>}
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-brand-600 py-2 font-medium text-white disabled:opacity-50 hover:bg-brand-700"
+          className="w-full rounded-lg bg-gold-500 py-2 font-medium text-ink-950 transition disabled:opacity-50 hover:bg-gold-400"
         >
           {loading ? "Registrando..." : "Registrar transação"}
         </button>
