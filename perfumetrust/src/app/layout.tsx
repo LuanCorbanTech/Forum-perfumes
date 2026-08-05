@@ -10,18 +10,25 @@ const displayFont = Cormorant_Garamond({
   variable: "--font-display",
   weight: ["300", "500", "600"],
   style: ["normal", "italic"],
+  // "swap" garante que o navegador troque para a fonte real assim que ela
+  // carregar, em vez de desistir e travar na fonte do sistema quando a
+  // rede está lenta ou em modos que priorizam desempenho/economizam dados
+  // (era isso que fazia os textos menores parecerem "fonte do computador").
+  display: "swap",
 });
 
 const bodyFont = Jost({
   subsets: ["latin"],
   variable: "--font-body",
   weight: ["300", "400", "500"],
+  display: "swap",
 });
 
 const monoFont = IBM_Plex_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
   weight: ["400", "500"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {

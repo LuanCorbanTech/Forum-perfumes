@@ -35,9 +35,26 @@ const config: Config = {
         },
       },
       fontFamily: {
-        serif: ["var(--font-display)", "Georgia", "serif"],
-        sans: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],
-        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        serif: ["var(--font-display)", "Georgia", "Cambria", "Times New Roman", "serif"],
+        sans: [
+          "var(--font-body)",
+          "ui-sans-serif",
+          "-apple-system",
+          "Segoe UI",
+          "system-ui",
+          "sans-serif",
+        ],
+        // Fallback com fontes monoespaçadas nomeadas (não só o genérico
+        // "monospace", que no Windows costuma virar Courier New e fica
+        // bem mais grosseiro nos rótulos pequenos em caixa alta).
+        mono: [
+          "var(--font-mono)",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Consolas",
+          "monospace",
+        ],
       },
       // Estética de joalheria: cantos quase retos em vez de arredondados.
       borderRadius: {
