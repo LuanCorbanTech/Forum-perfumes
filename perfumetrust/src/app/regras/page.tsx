@@ -1,10 +1,3 @@
-const TIPS = [
-  "Peça foto do frasco ao lado de um papel com o nome do usuário e a data.",
-  "Confira o lote no rótulo e na caixa — os dois têm que bater.",
-  "O site não intermedeia pagamento: confira a reputação aqui antes de fechar lá fora.",
-  "Vendedor novo? Comece com um decant antes do frasco cheio.",
-];
-
 const RULES = [
   "Registre a transação na plataforma assim que combinar a negociação — isso protege as duas partes.",
   "Só avalie depois que a transação estiver marcada como concluída (confirmação dupla).",
@@ -18,7 +11,7 @@ export default function RegrasPage() {
     <div className="mx-auto max-w-2xl space-y-10">
       <div>
         <p className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.26em] text-gold-500">
-          antes de anunciar
+          antes de negociar
         </p>
         <h1 className="font-serif text-3xl font-light text-ink-50">Regras do fórum</h1>
       </div>
@@ -33,20 +26,6 @@ export default function RegrasPage() {
             </li>
           ))}
         </ol>
-      </section>
-
-      <section className="border border-ink-700 bg-ink-800 p-5">
-        <h2 className="mb-4 font-mono text-[10px] uppercase tracking-[0.2em] text-gold-500">
-          como não tomar golpe
-        </h2>
-        <div className="space-y-3.5">
-          {TIPS.map((tip, i) => (
-            <div key={tip} className="grid grid-cols-[20px_1fr] items-start gap-3">
-              <span className="font-mono text-[10px] text-ink-500">{String(i + 1).padStart(2, "0")}</span>
-              <span className="text-[13.5px] leading-relaxed text-ink-300">{tip}</span>
-            </div>
-          ))}
-        </div>
       </section>
 
       <p className="text-sm text-ink-400">

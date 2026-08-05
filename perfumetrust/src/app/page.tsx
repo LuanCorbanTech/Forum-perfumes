@@ -3,19 +3,13 @@ import { SellerCard } from "@/components/SellerCard";
 import { BrandFilterTabs } from "@/components/BrandFilterTabs";
 import { createClient } from "@/lib/supabase/server";
 import { isVerifiedSeller } from "@/lib/trustScore";
+import { normalizeProfile } from "@/lib/normalizeProfile";
 import { initials } from "@/lib/initials";
 import type { Profile } from "@/lib/types";
 
 interface Props {
   searchParams: Promise<{ marca?: string; sort?: string }>;
 }
-
-const SAFETY_TIPS = [
-  "Peça foto do frasco ao lado de um papel com o nome do usuário e a data.",
-  "Confira o lote no rótulo e na caixa — os dois têm que bater.",
-  "O site não intermedeia pagamento: confira a reputação aqui antes de fechar lá fora.",
-  "Vendedor novo? Comece com um decant antes do frasco cheio.",
-];
 
 export default async function HomePage({ searchParams }: Props) {
   const { marca, sort } = await searchParams;
@@ -28,9 +22,10 @@ export default async function HomePage({ searchParams }: Props) {
       ? query.order("created_at", { ascending: false })
       : query.order("trust_score", { ascending: false });
 
-  const { data: sellers, count: filteredCount } = await query.limit(9).returns<Profile[]>();
+  const { data: sellersRaw, count: filteredCount } = await query.limit(9).returns<Profile[]>();
+  const sellers = (sellersRaw ?? []).map(normalizeProfile);
 
-  const sellerIds = (sellers ?? []).map((s) => s.id);
+  const sellerIds = sellers.map((s) => s.id);
 
   const [{ data: reviewsRaw }, { data: recsRaw }, { count: totalProfiles }, { data: ratedProfiles }, { count: completedTx }] =
     await Promise.all([
@@ -75,7 +70,7 @@ export default async function HomePage({ searchParams }: Props) {
       ? ratedProfiles.reduce((sum, p) => sum + p.average_rating, 0) / ratedProfiles.length
       : null;
 
-  const { data: highlighted } = await supabase
+  const { data: highlightedRaw } = await supabase
     .from("profiles")
     .select("*")
     .eq("is_banned", false)
@@ -83,6 +78,7 @@ export default async function HomePage({ searchParams }: Props) {
     .order("trust_score", { ascending: false })
     .limit(4)
     .returns<Profile[]>();
+  const highlighted = (highlightedRaw ?? []).map(normalizeProfile);
 
   return (
     <div className="space-y-0 -mt-10 -mx-4 sm:-mx-7">
@@ -90,33 +86,19 @@ export default async function HomePage({ searchParams }: Props) {
         <div className="mx-auto grid max-w-6xl gap-12 px-4 py-14 sm:px-7 sm:py-16 lg:grid-cols-[1.15fr_1fr] lg:items-end">
           <div>
             <p className="mb-5 font-mono text-[10.5px] uppercase tracking-[0.26em] text-gold-500">
-              o feed de hoje
+              diretório de reputação
             </p>
             <h1 className="font-serif text-4xl font-light leading-[1.05] text-ink-50 sm:text-[3.4rem]">
-              Alguém sempre está
+              Confira quem é
               <br />
-              <em className="italic text-gold-300">desapegando</em> do frasco
+              <em className="italic text-gold-300">confiável</em> antes de
               <br />
-              que você procura.
+              fechar o próximo negócio.
             </h1>
             <p className="mt-6 max-w-[46ch] text-[15px] leading-relaxed text-ink-300">
-              Frascos cheios, decants e restos de coleção anunciados por gente de verdade. Nível
-              do frasco, histórico de vendas e reputação à mostra em cada perfil.
+              Perfis de avaliação de compradores e vendedores do grupo de desapego: histórico de
+              transações, avaliações e reputação à mostra antes de você negociar.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3.5">
-              <Link
-                href="/transacoes/nova"
-                className="bg-gold-500 px-6 py-3.5 text-[12.5px] font-medium uppercase tracking-[0.08em] text-ink-950 transition hover:bg-gold-400"
-              >
-                Publicar um desapego
-              </Link>
-              <Link
-                href="/busca"
-                className="border border-ink-600 px-6 py-3.5 text-[12.5px] uppercase tracking-[0.08em] text-ink-100 transition hover:border-gold-500/50"
-              >
-                Ver discussões
-              </Link>
-            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-px overflow-hidden border border-ink-700 bg-ink-700">
@@ -173,20 +155,6 @@ export default async function HomePage({ searchParams }: Props) {
           </div>
 
           <aside className="space-y-5">
-            <div className="border border-ink-700 bg-ink-800 p-5">
-              <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.2em] text-gold-500">
-                como não tomar golpe
-              </p>
-              <div className="flex flex-col gap-3.5">
-                {SAFETY_TIPS.map((tip, i) => (
-                  <div key={tip} className="grid grid-cols-[20px_1fr] items-start gap-3">
-                    <span className="font-mono text-[10px] text-ink-500">{String(i + 1).padStart(2, "0")}</span>
-                    <span className="text-[13.5px] leading-relaxed text-ink-300">{tip}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {highlighted && highlighted.length > 0 && (
               <div className="border border-ink-700 bg-ink-800 p-5">
                 <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.2em] text-gold-500">
@@ -212,21 +180,6 @@ export default async function HomePage({ searchParams }: Props) {
                 </div>
               </div>
             )}
-
-            <div className="border border-gold-500/35 bg-gradient-to-b from-ink-700/50 to-ink-800 p-6">
-              <p className="mb-2.5 font-serif text-xl leading-snug text-ink-50">
-                Tem um frasco parado na gaveta?
-              </p>
-              <p className="mb-4 text-[13.5px] leading-relaxed text-ink-300">
-                Publicar leva dois minutos. Só pedimos foto do nível e o lote do frasco.
-              </p>
-              <Link
-                href="/transacoes/nova"
-                className="block bg-gold-500 py-3 text-center text-[12px] font-medium uppercase tracking-[0.1em] text-ink-950 transition hover:bg-gold-400"
-              >
-                Criar anúncio
-              </Link>
-            </div>
           </aside>
         </div>
       </div>

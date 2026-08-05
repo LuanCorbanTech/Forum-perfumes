@@ -31,6 +31,7 @@ export interface Profile {
   city: string | null;
   state: string | null;
   brands: string[];
+  item_types: string[];
   average_rating: number;
   reviews_count: number;
   completed_sales_count: number;
@@ -67,6 +68,7 @@ export interface Review {
   reviewed_id: string;
   rating: number;
   comment: string | null;
+  photo_url: string | null;
   created_at: string;
   reviewer?: Pick<Profile, "id" | "full_name" | "avatar_url">;
 }
@@ -105,6 +107,10 @@ export const BRAND_LIST = [
   "Tom Ford",
   "Xerjoff",
 ] as const;
+
+// Tipos de item que um vendedor costuma vender — mostrado no perfil e
+// editável em "Editar perfil".
+export const ITEM_TYPE_LIST = ["Frasco cheio", "Decant", "Parcial - tester"] as const;
 
 export const REPORT_REASON_LABELS: Record<ReportReason, string> = {
   golpe: "Golpe / fraude",

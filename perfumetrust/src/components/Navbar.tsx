@@ -22,11 +22,11 @@ export async function Navbar() {
   return (
     <header className="sticky top-0 z-30 border-b border-ink-700 bg-ink-900/95 backdrop-blur supports-[backdrop-filter]:bg-ink-900/85">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3.5 sm:px-7 lg:flex-nowrap">
-        <Link href="/" className="flex shrink-0 items-center gap-3">
-          <Image src="/logo.png" alt="Cheiro Novo" width={60} height={60} className="rounded-lg" priority />
+        <Link href="/" className="flex shrink-0 items-center gap-3.5">
+          <Image src="/logo.png" alt="Cheiro Novo" width={84} height={84} className="rounded-lg" priority />
           <span className="leading-tight">
-            <span className="block font-serif text-2xl text-ink-50">Cheiro Novo</span>
-            <span className="block font-mono text-[10px] uppercase tracking-[0.24em] text-ink-400">
+            <span className="block font-serif text-3xl text-ink-50">Cheiro Novo</span>
+            <span className="block font-mono text-[10.5px] uppercase tracking-[0.24em] text-ink-400">
               Desapego
             </span>
           </span>
@@ -56,26 +56,17 @@ export async function Navbar() {
               <form action="/auth/sair" method="post">
                 <button className="text-ink-400 transition hover:text-red-400">Sair</button>
               </form>
-              <Link
-                href="/transacoes/nova"
-                className="bg-gold-500 px-4 py-2 text-[11.5px] font-medium uppercase tracking-[0.08em] text-ink-950 transition hover:bg-gold-400"
-              >
-                Anunciar
-              </Link>
             </>
           ) : (
             <>
               <Link href="/autenticidade" className="text-ink-200 transition hover:text-gold-400">
                 Autenticidade
               </Link>
-              <Link href="/login" className="text-ink-200 transition hover:text-gold-400">
-                Entrar
-              </Link>
               <Link
                 href="/login"
                 className="bg-gold-500 px-4 py-2 text-[11.5px] font-medium uppercase tracking-[0.08em] text-ink-950 transition hover:bg-gold-400"
               >
-                Anunciar
+                Entrar
               </Link>
             </>
           )}

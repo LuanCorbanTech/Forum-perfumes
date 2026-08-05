@@ -11,6 +11,8 @@ interface Props {
   myReviewAlreadyExists: boolean;
 }
 
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5MB
+
 export function TransactionActions({ transaction, currentUserId, myReviewAlreadyExists }: Props) {
   const router = useRouter();
   const supabase = createClient();
@@ -18,6 +20,20 @@ export function TransactionActions({ transaction, currentUserId, myReviewAlready
   const [error, setError] = useState<string | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setPhotoError(null);
+    if (file && file.size > MAX_PHOTO_BYTES) {
+      setPhotoError("A foto precisa ter até 5MB.");
+      setPhoto(null);
+      e.target.value = "";
+      return;
+    }
+    setPhoto(file);
+  }
 
   const isBuyer = currentUserId === transaction.buyer_id;
   const iConfirmed = isBuyer ? !!transaction.buyer_confirmed_at : !!transaction.seller_confirmed_at;
@@ -42,12 +58,29 @@ export function TransactionActions({ transaction, currentUserId, myReviewAlready
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    let photoUrl: string | null = null;
+    if (photo) {
+      const ext = photo.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${currentUserId}/${transaction.id}-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("review-photos")
+        .upload(path, photo, { contentType: photo.type || undefined });
+      if (uploadError) {
+        setLoading(false);
+        setError(`Não foi possível enviar a foto: ${uploadError.message}`);
+        return;
+      }
+      photoUrl = supabase.storage.from("review-photos").getPublicUrl(path).data.publicUrl;
+    }
+
     const { error } = await supabase.from("reviews").insert({
       transaction_id: transaction.id,
       reviewer_id: currentUserId,
       reviewed_id: reviewedId,
       rating,
       comment: comment.trim() || null,
+      photo_url: photoUrl,
     });
     setLoading(false);
     if (error) {
@@ -106,12 +139,27 @@ export function TransactionActions({ transaction, currentUserId, myReviewAlready
             className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-sm text-ink-50 placeholder-ink-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
             rows={3}
           />
+          <div>
+            <label className="mb-1 block text-xs text-ink-400">
+              Foto do perfume recebido <span className="text-ink-500">(opcional)</span>
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-xs text-ink-300 file:mr-3 file:rounded file:border-0 file:bg-gold-500 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-ink-950"
+            />
+            {photoError && <p className="mt-1 text-xs text-red-300">{photoError}</p>}
+            {photo && !photoError && (
+              <p className="mt-1 text-xs text-ink-400">Selecionado: {photo.name}</p>
+            )}
+          </div>
           <button
             type="submit"
             disabled={loading}
             className="rounded-lg bg-gold-500 px-4 py-2 font-medium text-ink-950 transition disabled:opacity-50 hover:bg-gold-400"
           >
-            Enviar avaliação
+            {loading ? "Enviando..." : "Enviar avaliação"}
           </button>
         </form>
       )}

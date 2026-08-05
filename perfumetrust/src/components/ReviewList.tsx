@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { StarRating } from "./StarRating";
 import { timeAgo } from "@/lib/dateFormat";
 import type { Review } from "@/lib/types";
@@ -25,6 +26,22 @@ export function ReviewList({ reviews }: { reviews: Review[] }) {
             <StarRating rating={review.rating} showNumber={false} size="sm" />
           </div>
           {review.comment && <p className="mt-2 text-sm text-ink-200">{review.comment}</p>}
+          {review.photo_url && (
+            <a
+              href={review.photo_url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 block h-28 w-28 overflow-hidden rounded-lg border border-ink-600"
+            >
+              <Image
+                src={review.photo_url}
+                alt="Foto do perfume recebido, anexada pelo avaliador"
+                width={112}
+                height={112}
+                className="h-full w-full object-cover transition hover:opacity-80"
+              />
+            </a>
+          )}
         </li>
       ))}
     </ul>

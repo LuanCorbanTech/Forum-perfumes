@@ -38,7 +38,7 @@ export function SearchBar({ compact = false }: { compact?: boolean }) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por marca, perfume ou vendedor..."
+          placeholder="Buscar por membro..."
           className="w-full border border-ink-600 bg-ink-900/70 py-2 pl-3.5 pr-9 text-sm text-ink-50 placeholder-ink-400 focus:border-gold-500 focus:outline-none"
         />
         <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 border border-ink-600 px-1.5 py-0.5 font-mono text-[10px] text-ink-500">
@@ -54,7 +54,7 @@ export function SearchBar({ compact = false }: { compact?: boolean }) {
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar por nome ou telefone do vendedor..."
+        placeholder="Buscar por membro (nome ou telefone)..."
         className="flex-1 border border-ink-600 bg-ink-900/60 px-4 py-2 text-ink-50 placeholder-ink-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
       />
       <button

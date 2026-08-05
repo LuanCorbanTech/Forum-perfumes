@@ -2,6 +2,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { SellerCard } from "@/components/SellerCard";
 import { createClient } from "@/lib/supabase/server";
 import { isVerifiedSeller } from "@/lib/trustScore";
+import { normalizeProfile } from "@/lib/normalizeProfile";
 import type { Profile } from "@/lib/types";
 
 interface Props {
@@ -29,12 +30,12 @@ export default async function BuscaPage({ searchParams }: Props) {
       .limit(30)
       .returns<Profile[]>();
 
-    results = data ?? [];
+    results = (data ?? []).map(normalizeProfile);
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="font-serif text-2xl font-light text-ink-50">Buscar vendedor</h1>
+      <h1 className="font-serif text-2xl font-light text-ink-50">Buscar membro</h1>
       <SearchBar />
 
       {q ? (
@@ -46,7 +47,7 @@ export default async function BuscaPage({ searchParams }: Props) {
           </div>
         ) : (
           <p className="text-ink-300">
-            Nenhum vendedor encontrado para &quot;{q}&quot;. Verifique o nome ou telefone informado.
+            Nenhum membro encontrado para &quot;{q}&quot;. Verifique o nome ou telefone informado.
           </p>
         )
       ) : (

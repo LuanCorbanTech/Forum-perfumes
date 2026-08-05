@@ -57,6 +57,7 @@ create table if not exists public.profiles (
   city                   text,
   state                  text,
   brands                 text[] not null default '{}',  -- marcas que costuma vender (filtro no feed)
+  item_types             text[] not null default '{}',  -- tipos de item que costuma vender (frasco cheio, decant, parcial/tester)
 
   -- métricas de reputação (desnormalizadas para leitura rápida do perfil público)
   average_rating           numeric(3,2) not null default 0,   -- 0.00 a 5.00
@@ -84,6 +85,7 @@ comment on table public.profiles is 'Perfil público de compradores/vendedores d
 create index if not exists idx_profiles_phone on public.profiles using btree (phone);
 create index if not exists idx_profiles_full_name_trgm on public.profiles using gin (full_name gin_trgm_ops);
 create index if not exists idx_profiles_brands on public.profiles using gin (brands);
+create index if not exists idx_profiles_item_types on public.profiles using gin (item_types);
 
 -- ---------------------------------------------------------------------
 -- TRANSACTIONS — negociação entre comprador e vendedor
@@ -126,6 +128,7 @@ create table if not exists public.reviews (
 
   rating          smallint not null check (rating between 1 and 5),
   comment         text,
+  photo_url       text,  -- foto opcional do perfume recebido, anexada pelo avaliador
 
   created_at      timestamptz not null default now(),
 
@@ -201,3 +204,10 @@ create table if not exists public.admin_actions (
 );
 
 comment on table public.admin_actions is 'Log de auditoria de tudo que um admin faz no painel.';
+
+-- ---------------------------------------------------------------------
+-- STORAGE — bucket público para as fotos anexadas nas avaliações
+-- ---------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('review-photos', 'review-photos', true)
+on conflict (id) do nothing;

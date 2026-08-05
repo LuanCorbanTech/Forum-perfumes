@@ -7,6 +7,7 @@ import { RecommendButton } from "@/components/RecommendButton";
 import { EditProfileForm } from "@/components/EditProfileForm";
 import { memberSince } from "@/lib/dateFormat";
 import { isVerifiedSeller } from "@/lib/trustScore";
+import { normalizeProfile } from "@/lib/normalizeProfile";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, Review } from "@/lib/types";
 
@@ -18,13 +19,14 @@ export default async function PerfilPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: profile } = await supabase
+  const { data: profileRaw } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", id)
     .single<Profile>();
 
-  if (!profile) notFound();
+  if (!profileRaw) notFound();
+  const profile = normalizeProfile(profileRaw);
 
   const { data: reviews } = await supabase
     .from("reviews")
@@ -114,6 +116,19 @@ export default async function PerfilPage({ params }: Props) {
                 className="border border-ink-600 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide text-ink-300"
               >
                 {brand}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {profile.item_types.length > 0 && (
+          <div className="relative mt-2 flex flex-wrap gap-2">
+            {profile.item_types.map((type) => (
+              <span
+                key={type}
+                className="border border-gold-500/30 bg-gold-500/5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide text-gold-300"
+              >
+                {type}
               </span>
             ))}
           </div>

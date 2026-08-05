@@ -232,3 +232,25 @@ create policy "admin_actions_select_admin"
 
 -- Inserção só acontece via funções security definer (admin_review_report,
 -- admin_set_ban); não há policy de insert para uso direto pelo cliente.
+
+-- =====================================================================
+-- STORAGE (bucket review-photos) — foto opcional anexada na avaliação
+-- =====================================================================
+-- Bucket é público (leitura livre da URL, ver schema.sql). Upload só é
+-- permitido dentro de uma "pasta" com o próprio id do usuário — ex.:
+-- "<uid do avaliador>/<id da transação>.jpg" — pra ninguém subir arquivo
+-- em nome de outra pessoa.
+drop policy if exists "review_photos_insert_own_folder" on storage.objects;
+create policy "review_photos_insert_own_folder"
+  on storage.objects for insert
+  to authenticated
+  with check (
+    bucket_id = 'review-photos'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "review_photos_select_public" on storage.objects;
+create policy "review_photos_select_public"
+  on storage.objects for select
+  to public
+  using (bucket_id = 'review-photos');

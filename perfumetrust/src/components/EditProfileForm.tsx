@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { BRAND_LIST } from "@/lib/types";
+import { BRAND_LIST, ITEM_TYPE_LIST } from "@/lib/types";
 import type { Profile } from "@/lib/types";
 
 export function EditProfileForm({ profile }: { profile: Profile }) {
@@ -14,11 +14,16 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
   const [city, setCity] = useState(profile.city ?? "");
   const [state, setState] = useState(profile.state ?? "");
   const [brands, setBrands] = useState<string[]>(profile.brands ?? []);
+  const [itemTypes, setItemTypes] = useState<string[]>(profile.item_types ?? []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function toggleBrand(brand: string) {
     setBrands((prev) => (prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]));
+  }
+
+  function toggleItemType(type: string) {
+    setItemTypes((prev) => (prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -33,6 +38,7 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
         city: city.trim() || null,
         state: state.trim() || null,
         brands,
+        item_types: itemTypes,
       })
       .eq("id", profile.id);
 
@@ -104,6 +110,26 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
               }`}
             >
               {brand}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="mb-2 block text-xs text-ink-400">Tipos de item que costuma vender</label>
+        <div className="flex flex-wrap gap-2">
+          {ITEM_TYPE_LIST.map((type) => (
+            <button
+              type="button"
+              key={type}
+              onClick={() => toggleItemType(type)}
+              className={`border px-2.5 py-1 text-[11px] transition ${
+                itemTypes.includes(type)
+                  ? "border-gold-500 bg-gold-500/10 text-gold-300"
+                  : "border-ink-600 text-ink-300 hover:border-ink-500"
+              }`}
+            >
+              {type}
             </button>
           ))}
         </div>

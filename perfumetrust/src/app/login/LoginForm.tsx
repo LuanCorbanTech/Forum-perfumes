@@ -150,6 +150,18 @@ export function LoginForm() {
             >
               {loading ? "Enviando..." : "Enviar código"}
             </button>
+
+            <p className="text-center text-[11px] leading-relaxed text-ink-500">
+              Ao continuar, você concorda com os{" "}
+              <a href="/termos" target="_blank" rel="noreferrer" className="text-gold-400 hover:underline">
+                termos de uso
+              </a>{" "}
+              e as{" "}
+              <a href="/regras" target="_blank" rel="noreferrer" className="text-gold-400 hover:underline">
+                regras do fórum
+              </a>
+              .
+            </p>
           </form>
         </>
       )}

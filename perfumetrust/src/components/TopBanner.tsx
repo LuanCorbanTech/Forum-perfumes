@@ -42,7 +42,7 @@ export async function TopBanner() {
             )}
           </span>
           <Link href="/regras" className="text-gold-500 hover:text-gold-400">
-            → leia as regras antes de anunciar
+            → leia as regras antes de negociar
           </Link>
         </div>
       </div>

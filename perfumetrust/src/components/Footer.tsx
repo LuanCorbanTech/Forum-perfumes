@@ -18,11 +18,14 @@ export function Footer() {
           <Link href="/regras" className="hover:text-gold-400">
             Regras do fórum
           </Link>
+          <Link href="/termos" className="hover:text-gold-400">
+            Termos de uso
+          </Link>
           <Link href="/autenticidade" className="hover:text-gold-400">
             Como verificamos frascos
           </Link>
           <Link href="/busca" className="hover:text-gold-400">
-            Denunciar anúncio
+            Denunciar vendedor
           </Link>
           <Link href="/contato" className="hover:text-gold-400">
             Contato
