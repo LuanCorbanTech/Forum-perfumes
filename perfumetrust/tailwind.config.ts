@@ -70,17 +70,6 @@ const config: Config = {
       backgroundImage: {
         "radial-fade": "radial-gradient(circle at 50% 0%, var(--tw-gradient-stops))",
       },
-      keyframes: {
-        marquee: {
-          "0%": { transform: "translateX(0%)" },
-          // A lista é renderizada duplicada, então andar 50% da largura
-          // total é exatamente uma volta completa — o loop fica sem costura.
-          "100%": { transform: "translateX(-50%)" },
-        },
-      },
-      animation: {
-        marquee: "marquee 32s linear infinite",
-      },
     },
   },
   plugins: [],
