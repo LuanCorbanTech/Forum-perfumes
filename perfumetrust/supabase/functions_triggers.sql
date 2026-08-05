@@ -164,6 +164,46 @@ create trigger reviews_before_insert
   for each row execute function public.trg_reviews_before_insert();
 
 -- ---------------------------------------------------------------------
+-- 4b) Contador de recomendações — recalcula recommendations_count sempre
+--     que uma recomendação é criada ou desfeita.
+-- ---------------------------------------------------------------------
+create or replace function public.refresh_recommendations_count(p_profile_id uuid)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  update public.profiles
+     set recommendations_count = (
+           select count(*) from public.recommendations where recommended_id = p_profile_id
+         ),
+         updated_at = now()
+   where id = p_profile_id;
+end;
+$$;
+
+create or replace function public.trg_recommendations_after_change()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if tg_op = 'DELETE' then
+    perform public.refresh_recommendations_count(old.recommended_id);
+    return old;
+  else
+    perform public.refresh_recommendations_count(new.recommended_id);
+    return new;
+  end if;
+end;
+$$;
+
+drop trigger if exists recommendations_after_change on public.recommendations;
+create trigger recommendations_after_change
+  after insert or delete on public.recommendations
+  for each row execute function public.trg_recommendations_after_change();
+
+-- ---------------------------------------------------------------------
 -- 5) Confirmação de transação (dupla confirmação)
 --    Chamada pelas Server Actions da aplicação via RPC:
 --      select public.confirm_transaction('<transaction_id>');
@@ -217,11 +257,15 @@ begin
          updated_at = v_tx.updated_at
    where id = p_transaction_id;
 
-  -- Ao concluir, incrementa vendas concluídas do vendedor e recalcula score dos dois
+  -- Ao concluir, incrementa vendas do vendedor e compras do comprador, e recalcula score dos dois
   if v_tx.status = 'completed' then
     update public.profiles
        set completed_sales_count = completed_sales_count + 1
      where id = v_tx.seller_id;
+
+    update public.profiles
+       set completed_purchases_count = completed_purchases_count + 1
+     where id = v_tx.buyer_id;
 
     perform public.refresh_profile_stats(v_tx.seller_id);
     perform public.refresh_profile_stats(v_tx.buyer_id);

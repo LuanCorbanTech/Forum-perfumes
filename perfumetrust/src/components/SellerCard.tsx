@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { StarRating } from "./StarRating";
 import { TrustScoreBadge } from "./TrustScoreBadge";
+import { memberSince } from "@/lib/dateFormat";
 import type { Profile } from "@/lib/types";
 
 export function SellerCard({ profile }: { profile: Profile }) {
@@ -37,7 +38,11 @@ export function SellerCard({ profile }: { profile: Profile }) {
           <p className="mt-2 text-sm text-gray-500">
             {profile.completed_sales_count} venda{profile.completed_sales_count === 1 ? "" : "s"} concluída
             {profile.completed_sales_count === 1 ? "" : "s"}
+            {profile.recommendations_count > 0 && (
+              <> · 👍 {profile.recommendations_count} recomenda{profile.recommendations_count === 1 ? "ção" : "ções"}</>
+            )}
           </p>
+          <p className="mt-1 text-xs text-gray-400">{memberSince(profile.created_at)}</p>
         </div>
       </div>
     </Link>

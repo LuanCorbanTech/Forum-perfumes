@@ -58,10 +58,12 @@ create table if not exists public.profiles (
   state                  text,
 
   -- métricas de reputação (desnormalizadas para leitura rápida do perfil público)
-  average_rating         numeric(3,2) not null default 0,   -- 0.00 a 5.00
-  reviews_count          integer      not null default 0,
-  completed_sales_count  integer      not null default 0,
-  trust_score            integer      not null default 50 check (trust_score between 0 and 100),
+  average_rating           numeric(3,2) not null default 0,   -- 0.00 a 5.00
+  reviews_count            integer      not null default 0,
+  completed_sales_count    integer      not null default 0,   -- vendas concluídas (como vendedor)
+  completed_purchases_count integer     not null default 0,   -- compras concluídas (como comprador)
+  recommendations_count    integer      not null default 0,   -- "recomendo esse vendedor", separado da nota
+  trust_score              integer      not null default 50 check (trust_score between 0 and 100),
 
   -- moderação
   is_admin               boolean not null default false,
@@ -160,6 +162,26 @@ comment on table public.reports is 'Denúncias enviadas por usuários; aprovadas
 
 create index if not exists idx_reports_reported on public.reports (reported_id);
 create index if not exists idx_reports_status on public.reports (status);
+
+-- ---------------------------------------------------------------------
+-- RECOMMENDATIONS — "recomendo este vendedor", separado da nota/estrelas.
+-- Qualquer usuário pode recomendar outro (sem precisar de transação
+-- concluída), uma vez por par de usuários — é um sinal social simples,
+-- tipo "endorsement", não substitui a avaliação com nota.
+-- ---------------------------------------------------------------------
+create table if not exists public.recommendations (
+  id              uuid primary key default gen_random_uuid(),
+  recommender_id  uuid not null references public.profiles(id),
+  recommended_id  uuid not null references public.profiles(id),
+  created_at      timestamptz not null default now(),
+
+  constraint recommender_not_recommended check (recommender_id <> recommended_id),
+  constraint one_recommendation_per_pair unique (recommender_id, recommended_id)
+);
+
+comment on table public.recommendations is 'Recomendação simples (sem nota/comentário) de um usuário para outro; contador exibido no perfil público.';
+
+create index if not exists idx_recommendations_recommended on public.recommendations (recommended_id);
 
 -- ---------------------------------------------------------------------
 -- ADMIN_ACTIONS — trilha de auditoria das ações administrativas

@@ -3,6 +3,8 @@ import { StarRating } from "@/components/StarRating";
 import { TrustScoreBadge } from "@/components/TrustScoreBadge";
 import { ReviewList } from "@/components/ReviewList";
 import { ReportForm } from "@/components/ReportForm";
+import { RecommendButton } from "@/components/RecommendButton";
+import { memberSince } from "@/lib/dateFormat";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, Review } from "@/lib/types";
 
@@ -35,6 +37,17 @@ export default async function PerfilPage({ params }: Props) {
 
   const isOwnProfile = user?.id === id;
 
+  let alreadyRecommended = false;
+  if (user && !isOwnProfile) {
+    const { data: existingRecommendation } = await supabase
+      .from("recommendations")
+      .select("id")
+      .eq("recommender_id", user.id)
+      .eq("recommended_id", id)
+      .maybeSingle();
+    alreadyRecommended = !!existingRecommendation;
+  }
+
   return (
     <div className="space-y-8">
       <section className="rounded-2xl border border-gray-200 bg-white p-6">
@@ -61,26 +74,41 @@ export default async function PerfilPage({ params }: Props) {
           </div>
 
           {!isOwnProfile && user && (
-            <a
-              href={`/transacoes/nova?vendedor=${profile.id}`}
-              className="inline-block rounded-lg bg-brand-600 px-4 py-2 text-center font-medium text-white hover:bg-brand-700"
-            >
-              Registrar transação
-            </a>
+            <div className="flex flex-col items-stretch gap-2 sm:items-end">
+              <a
+                href={`/transacoes/nova?vendedor=${profile.id}`}
+                className="inline-block rounded-lg bg-brand-600 px-4 py-2 text-center font-medium text-white hover:bg-brand-700"
+              >
+                Registrar transação
+              </a>
+              <RecommendButton
+                recommendedId={profile.id}
+                currentUserId={user.id}
+                initiallyRecommended={alreadyRecommended}
+              />
+            </div>
           )}
         </div>
 
         {profile.bio && <p className="mt-4 text-gray-600">{profile.bio}</p>}
 
-        <div className="mt-6 grid grid-cols-1 gap-4 border-t border-gray-100 pt-6 sm:grid-cols-3">
+        <p className="mt-3 text-sm text-gray-500">{memberSince(profile.created_at)}</p>
+
+        <div className="mt-6 grid grid-cols-2 gap-4 border-t border-gray-100 pt-6 sm:grid-cols-3">
           <Stat label="Nota média">
             <StarRating rating={profile.average_rating} reviewsCount={profile.reviews_count} />
+          </Stat>
+          <Stat label="Score de confiabilidade">
+            <TrustScoreBadge score={profile.trust_score} reviewsCount={profile.reviews_count} />
+          </Stat>
+          <Stat label="Recomendações">
+            <span className="text-xl font-bold text-gray-900">👍 {profile.recommendations_count}</span>
           </Stat>
           <Stat label="Vendas concluídas">
             <span className="text-xl font-bold text-gray-900">{profile.completed_sales_count}</span>
           </Stat>
-          <Stat label="Score de confiabilidade">
-            <TrustScoreBadge score={profile.trust_score} reviewsCount={profile.reviews_count} />
+          <Stat label="Compras concluídas">
+            <span className="text-xl font-bold text-gray-900">{profile.completed_purchases_count}</span>
           </Stat>
         </div>
       </section>

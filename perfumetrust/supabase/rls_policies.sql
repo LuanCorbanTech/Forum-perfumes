@@ -3,11 +3,12 @@
 -- Execute por último, depois de schema.sql e functions_triggers.sql
 -- =====================================================================
 
-alter table public.profiles      enable row level security;
-alter table public.transactions  enable row level security;
-alter table public.reviews       enable row level security;
-alter table public.reports       enable row level security;
-alter table public.admin_actions enable row level security;
+alter table public.profiles       enable row level security;
+alter table public.transactions   enable row level security;
+alter table public.reviews        enable row level security;
+alter table public.reports        enable row level security;
+alter table public.recommendations enable row level security;
+alter table public.admin_actions  enable row level security;
 
 -- ---------------------------------------------------------------------
 -- Trigger de proteção: impede que um usuário comum altere campos
@@ -49,10 +50,12 @@ begin
   end if;
 
   -- usuário comum: preserva os valores antigos dos campos protegidos
-  new.trust_score           := old.trust_score;
-  new.average_rating        := old.average_rating;
-  new.reviews_count         := old.reviews_count;
-  new.completed_sales_count := old.completed_sales_count;
+  new.trust_score               := old.trust_score;
+  new.average_rating            := old.average_rating;
+  new.reviews_count             := old.reviews_count;
+  new.completed_sales_count     := old.completed_sales_count;
+  new.completed_purchases_count := old.completed_purchases_count;
+  new.recommendations_count     := old.recommendations_count;
   new.is_admin              := old.is_admin;
   new.is_banned             := old.is_banned;
   new.banned_reason         := old.banned_reason;
@@ -164,6 +167,30 @@ create policy "reviews_insert_after_completion"
   );
 
 -- Sem policy de UPDATE/DELETE => ninguém pode alterar ou apagar avaliações.
+
+-- =====================================================================
+-- RECOMMENDATIONS — "recomendo este vendedor" (sinal social simples)
+-- =====================================================================
+-- Contador é público (aparece no perfil de qualquer um).
+drop policy if exists "recommendations_select_public" on public.recommendations;
+create policy "recommendations_select_public"
+  on public.recommendations for select
+  to anon, authenticated
+  using (true);
+
+-- Só posso criar uma recomendação em meu próprio nome, para outra pessoa.
+drop policy if exists "recommendations_insert_own" on public.recommendations;
+create policy "recommendations_insert_own"
+  on public.recommendations for insert
+  to authenticated
+  with check (auth.uid() = recommender_id and recommender_id <> recommended_id);
+
+-- Posso "desfazer" (apagar) só a minha própria recomendação.
+drop policy if exists "recommendations_delete_own" on public.recommendations;
+create policy "recommendations_delete_own"
+  on public.recommendations for delete
+  to authenticated
+  using (auth.uid() = recommender_id);
 
 -- =====================================================================
 -- REPORTS (denúncias)

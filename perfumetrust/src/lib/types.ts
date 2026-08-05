@@ -33,6 +33,8 @@ export interface Profile {
   average_rating: number;
   reviews_count: number;
   completed_sales_count: number;
+  completed_purchases_count: number;
+  recommendations_count: number;
   trust_score: number;
   is_admin: boolean;
   is_banned: boolean;
@@ -82,6 +84,13 @@ export interface Report {
   created_at: string;
   reporter?: Pick<Profile, "id" | "full_name">;
   reported?: Pick<Profile, "id" | "full_name">;
+}
+
+export interface Recommendation {
+  id: string;
+  recommender_id: string;
+  recommended_id: string;
+  created_at: string;
 }
 
 export const REPORT_REASON_LABELS: Record<ReportReason, string> = {

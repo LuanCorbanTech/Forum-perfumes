@@ -1,17 +1,6 @@
 import { StarRating } from "./StarRating";
+import { timeAgo } from "@/lib/dateFormat";
 import type { Review } from "@/lib/types";
-
-function timeAgo(dateStr: string): string {
-  const diffMs = Date.now() - new Date(dateStr).getTime();
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (days < 1) return "hoje";
-  if (days === 1) return "há 1 dia";
-  if (days < 30) return `há ${days} dias`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `há ${months} mês${months > 1 ? "es" : ""}`;
-  const years = Math.floor(months / 12);
-  return `há ${years} ano${years > 1 ? "s" : ""}`;
-}
 
 export function ReviewList({ reviews }: { reviews: Review[] }) {
   if (reviews.length === 0) {
