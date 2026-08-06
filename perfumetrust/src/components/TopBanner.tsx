@@ -20,7 +20,7 @@ export async function TopBanner() {
 
   return (
     <>
-      <div className="bg-ink-950 border-b border-ink-700">
+      <div className="border-b border-obsidian-600 bg-obsidian-900">
         <Image
           src="/banner-topo.png"
           alt="Canal Cheiro Novo — vídeos novos de seg a sáb às 20h15, shorts todos os dias às 19h, @canalcheironovo"
@@ -30,7 +30,7 @@ export async function TopBanner() {
           className="mx-auto block h-auto w-full max-w-6xl"
         />
       </div>
-      <div className="border-b border-ink-700 bg-ink-950/60 py-1.5 font-mono text-[11px] tracking-wide text-ink-400">
+      <div className="border-b border-sand-300 bg-sand py-1.5 text-[11px] font-normal text-[#5B6470]">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 sm:px-7">
           <span>
             {(totalProfiles ?? 0).toLocaleString("pt-BR")} vendedores cadastrados
@@ -41,7 +41,7 @@ export async function TopBanner() {
               </>
             )}
           </span>
-          <Link href="/regras" className="text-gold-500 hover:text-gold-400">
+          <Link href="/regras" className="text-dourado hover:text-dourado-hover">
             → leia as regras antes de negociar
           </Link>
         </div>

@@ -209,5 +209,9 @@ comment on table public.admin_actions is 'Log de auditoria de tudo que um admin 
 -- STORAGE — bucket público para as fotos anexadas nas avaliações
 -- ---------------------------------------------------------------------
 insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public)
 values ('review-photos', 'review-photos', true)
 on conflict (id) do nothing;

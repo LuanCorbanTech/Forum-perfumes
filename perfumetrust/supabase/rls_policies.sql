@@ -254,3 +254,38 @@ create policy "review_photos_select_public"
   on storage.objects for select
   to public
   using (bucket_id = 'review-photos');
+
+-- =====================================================================
+-- STORAGE (bucket avatars) — foto de perfil (obrigatória a partir de agora)
+-- =====================================================================
+-- Mesmo padrão do review-photos: bucket público pra leitura, upload/troca/
+-- remoção só dentro da "pasta" com o próprio id do usuário — ex.:
+-- "<uid do usuário>/<timestamp>.jpg" — pra ninguém subir/trocar foto em
+-- nome de outra pessoa.
+drop policy if exists "avatars_insert_own_folder" on storage.objects;
+create policy "avatars_insert_own_folder"
+  on storage.objects for insert
+  to authenticated
+  with check (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "avatars_update_own_folder" on storage.objects;
+create policy "avatars_update_own_folder"
+  on storage.objects for update
+  to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "avatars_delete_own_folder" on storage.objects;
+create policy "avatars_delete_own_folder"
+  on storage.objects for delete
+  to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "avatars_select_public" on storage.objects;
+create policy "avatars_select_public"
+  on storage.objects for select
+  to public
+  using (bucket_id = 'avatars');

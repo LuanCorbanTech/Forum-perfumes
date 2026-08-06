@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { BRAND_LIST, ITEM_TYPE_LIST } from "@/lib/types";
 import type { Profile } from "@/lib/types";
+import { Avatar } from "./Avatar";
+
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5MB
 
 export function EditProfileForm({ profile }: { profile: Profile }) {
   const router = useRouter();
@@ -15,6 +18,9 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
   const [state, setState] = useState(profile.state ?? "");
   const [brands, setBrands] = useState<string[]>(profile.brands ?? []);
   const [itemTypes, setItemTypes] = useState<string[]>(profile.item_types ?? []);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(profile.avatar_url ?? null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,10 +32,47 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
     setItemTypes((prev) => (prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]));
   }
 
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setAvatarError(null);
+    if (file && file.size > MAX_PHOTO_BYTES) {
+      setAvatarError("A foto precisa ter até 5MB.");
+      setAvatarFile(null);
+      e.target.value = "";
+      return;
+    }
+    setAvatarFile(file);
+    if (file) setAvatarPreview(URL.createObjectURL(file));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+    setAvatarError(null);
+
+    // A foto de perfil é obrigatória: só deixa salvar se já existir uma
+    // (profile.avatar_url) ou se uma nova tiver sido selecionada agora.
+    if (!profile.avatar_url && !avatarFile) {
+      setAvatarError("Adicione uma foto pessoal para salvar o perfil, ela é obrigatória.");
+      return;
+    }
+
+    setLoading(true);
+
+    let avatarUrl = profile.avatar_url;
+    if (avatarFile) {
+      const ext = avatarFile.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${profile.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, avatarFile, { contentType: avatarFile.type || undefined });
+      if (uploadError) {
+        setLoading(false);
+        setAvatarError(`Não foi possível enviar a foto: ${uploadError.message}`);
+        return;
+      }
+      avatarUrl = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+    }
 
     const { error } = await supabase
       .from("profiles")
@@ -39,6 +82,7 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
         state: state.trim() || null,
         brands,
         item_types: itemTypes,
+        avatar_url: avatarUrl,
       })
       .eq("id", profile.id);
 
@@ -55,7 +99,7 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="whitespace-nowrap border border-ink-600 px-4 py-2 font-mono text-[11.5px] uppercase tracking-[0.08em] text-ink-200 transition hover:border-gold-500/50 hover:text-gold-300"
+        className="whitespace-nowrap rounded-lg border border-sand-400 px-4 py-2 text-[11.5px] font-semibold uppercase tracking-[0.02em] text-obsidian-900 transition-colors hover:border-dourado hover:text-dourado"
       >
         Editar perfil
       </button>
@@ -63,50 +107,84 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full space-y-4 border border-ink-700 bg-ink-900/60 p-5 sm:w-80">
-      {error && <p className="bg-red-400/10 p-2 text-xs text-red-300">{error}</p>}
+    <form
+      onSubmit={handleSubmit}
+      className="w-full space-y-4 rounded-card border border-sand-300 bg-white p-5 sm:w-80"
+    >
+      {error && (
+        <p className="rounded-lg border border-crimson-tint-border bg-crimson-tint p-2 text-xs text-crimson">
+          {error}
+        </p>
+      )}
 
       <div>
-        <label className="mb-1 block text-xs text-ink-400">Nome</label>
+        <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+          Foto de perfil <span className="text-dourado-dark">(obrigatória)</span>
+        </label>
+        <div className="flex items-center gap-3">
+          <Avatar
+            fullName={fullName || profile.full_name}
+            avatarUrl={avatarPreview}
+            size={56}
+            variant="dark-square"
+          />
+          <label className="cursor-pointer rounded-lg border border-sand-400 px-3 py-2 text-xs font-semibold text-obsidian-900 transition-colors hover:border-dourado hover:text-dourado">
+            {avatarPreview ? "Trocar foto" : "Enviar foto"}
+            <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+          </label>
+        </div>
+        {avatarError && <p className="mt-1.5 text-xs text-crimson">{avatarError}</p>}
+      </div>
+
+      <div>
+        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+          Nome
+        </label>
         <input
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
-          className="w-full border border-ink-600 bg-ink-900/60 p-2 text-sm text-ink-50 focus:border-gold-500 focus:outline-none"
+          className="w-full rounded-lg border border-sand-400 bg-white p-2 text-sm text-obsidian-900 focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
         />
       </div>
 
       <div className="flex gap-2">
         <div className="flex-1">
-          <label className="mb-1 block text-xs text-ink-400">Cidade</label>
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+            Cidade
+          </label>
           <input
             value={city}
             onChange={(e) => setCity(e.target.value)}
-            className="w-full border border-ink-600 bg-ink-900/60 p-2 text-sm text-ink-50 focus:border-gold-500 focus:outline-none"
+            className="w-full rounded-lg border border-sand-400 bg-white p-2 text-sm text-obsidian-900 focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
           />
         </div>
         <div className="w-20">
-          <label className="mb-1 block text-xs text-ink-400">UF</label>
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+            UF
+          </label>
           <input
             value={state}
             maxLength={2}
             onChange={(e) => setState(e.target.value.toUpperCase())}
-            className="w-full border border-ink-600 bg-ink-900/60 p-2 text-sm uppercase text-ink-50 focus:border-gold-500 focus:outline-none"
+            className="w-full rounded-lg border border-sand-400 bg-white p-2 text-sm uppercase text-obsidian-900 focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
           />
         </div>
       </div>
 
       <div>
-        <label className="mb-2 block text-xs text-ink-400">Marcas que costuma vender</label>
+        <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+          Marcas que costuma vender
+        </label>
         <div className="flex flex-wrap gap-2">
           {BRAND_LIST.map((brand) => (
             <button
               type="button"
               key={brand}
               onClick={() => toggleBrand(brand)}
-              className={`border px-2.5 py-1 text-[11px] transition ${
+              className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
                 brands.includes(brand)
-                  ? "border-gold-500 bg-gold-500/10 text-gold-300"
-                  : "border-ink-600 text-ink-300 hover:border-ink-500"
+                  ? "border-dourado bg-dourado-tint text-dourado-dark"
+                  : "border-sand-400 text-[#5B6470] hover:border-obsidian-900/30"
               }`}
             >
               {brand}
@@ -116,17 +194,19 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
       </div>
 
       <div>
-        <label className="mb-2 block text-xs text-ink-400">Tipos de item que costuma vender</label>
+        <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+          Tipos de item que costuma vender
+        </label>
         <div className="flex flex-wrap gap-2">
           {ITEM_TYPE_LIST.map((type) => (
             <button
               type="button"
               key={type}
               onClick={() => toggleItemType(type)}
-              className={`border px-2.5 py-1 text-[11px] transition ${
+              className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
                 itemTypes.includes(type)
-                  ? "border-gold-500 bg-gold-500/10 text-gold-300"
-                  : "border-ink-600 text-ink-300 hover:border-ink-500"
+                  ? "border-dourado bg-dourado-tint text-dourado-dark"
+                  : "border-sand-400 text-[#5B6470] hover:border-obsidian-900/30"
               }`}
             >
               {type}
@@ -139,14 +219,14 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
         <button
           type="submit"
           disabled={loading}
-          className="bg-gold-500 px-4 py-2 text-[12px] font-medium uppercase tracking-[0.08em] text-ink-950 transition disabled:opacity-50 hover:bg-gold-400"
+          className="rounded-lg bg-obsidian-900 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:opacity-50 hover:bg-dourado hover:text-obsidian-900"
         >
-          Salvar
+          {loading ? "Salvando..." : "Salvar"}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="border border-ink-600 px-4 py-2 text-[12px] uppercase tracking-[0.08em] text-ink-300 transition hover:bg-ink-800"
+          className="rounded-lg border border-sand-400 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.02em] text-[#5B6470] transition-colors hover:bg-sand"
         >
           Cancelar
         </button>

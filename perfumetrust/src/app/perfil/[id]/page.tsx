@@ -1,12 +1,12 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { StarRating } from "@/components/StarRating";
-import { TrustScoreBadge } from "@/components/TrustScoreBadge";
 import { ReviewList } from "@/components/ReviewList";
 import { ReportForm } from "@/components/ReportForm";
 import { RecommendButton } from "@/components/RecommendButton";
 import { EditProfileForm } from "@/components/EditProfileForm";
-import { memberSince } from "@/lib/dateFormat";
-import { isVerifiedSeller } from "@/lib/trustScore";
+import { Avatar } from "@/components/Avatar";
+import { TagIcon, BagIcon, TrophyIcon } from "@/components/icons";
+import { isVerifiedSeller, getTrustLevel, TRUST_LEVEL_SHORT } from "@/lib/trustScore";
 import { normalizeProfile } from "@/lib/normalizeProfile";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, Review } from "@/lib/types";
@@ -40,6 +40,10 @@ export default async function PerfilPage({ params }: Props) {
   } = await supabase.auth.getUser();
 
   const isOwnProfile = user?.id === id;
+  const verified = isVerifiedSeller(profile);
+  const memberSinceYear = new Date(profile.created_at).getFullYear();
+  const trustLevel = getTrustLevel(profile.trust_score, profile.reviews_count);
+  const starPct = Math.min(100, Math.max(0, (profile.average_rating / 5) * 100));
 
   let alreadyRecommended = false;
   if (user && !isOwnProfile) {
@@ -53,43 +57,82 @@ export default async function PerfilPage({ params }: Props) {
   }
 
   return (
-    <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-2xl border border-gold-400/15 bg-ink-800 p-6">
-        <div className="bg-radial-fade pointer-events-none absolute inset-0 from-gold-500/10 via-transparent to-transparent" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gold-400/15 text-2xl font-bold text-gold-300">
-              {profile.full_name.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="font-serif text-2xl font-light text-ink-50">{profile.full_name}</h1>
-                {isVerifiedSeller(profile) && (
-                  <span className="whitespace-nowrap border border-gold-500/50 bg-gold-500/10 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.12em] text-gold-300">
-                    ✓ verificado
+    <div>
+      <Link
+        href="/"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-sand-400 bg-white px-3.5 py-[9px] text-[11px] font-semibold uppercase tracking-[0.02em] text-[#5B6470] transition-colors hover:border-dourado hover:text-dourado"
+      >
+        ← Voltar ao diretório de membros
+      </Link>
+
+      <div className="mt-6">
+        <div className="flex flex-wrap items-start gap-[18px]">
+          <Avatar
+            fullName={profile.full_name}
+            avatarUrl={profile.avatar_url}
+            size={84}
+            variant="dark-square"
+            borderClass={verified ? "border-2 border-verde" : "border border-obsidian-400"}
+          />
+          <div className="min-w-[220px] flex-1">
+            <h1 className="font-serif text-4xl font-medium leading-none text-obsidian-900">
+              {profile.full_name}
+            </h1>
+            <p className="mt-2 flex flex-wrap items-center gap-2.5 text-[13px] font-normal text-[#5B6470]">
+              {profile.city
+                ? `${profile.city}${profile.state ? `, ${profile.state}` : ""}`
+                : "Localização não informada"}
+              <span className="rounded-full border border-sand-400 bg-white px-2.5 py-[3px] text-[10.5px] font-semibold uppercase tracking-[0.02em] text-[#5B6470]">
+                Membro desde {memberSinceYear}
+              </span>
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {verified && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-verde-dark-border bg-verde-dark py-[5px] pl-[5px] pr-3 text-[10.5px] font-semibold text-verde-light">
+                  <span className="grid h-[15px] w-[15px] place-items-center rounded-full bg-verde text-[8px] font-bold leading-none text-white">
+                    ✓
                   </span>
-                )}
-              </div>
-              {(profile.city || profile.state) && (
-                <p className="text-sm text-ink-300">
-                  {profile.city}
-                  {profile.city && profile.state ? ", " : ""}
-                  {profile.state}
-                </p>
+                  Vendedor verificado
+                </span>
               )}
               {profile.is_banned && (
-                <span className="mt-1 inline-block rounded bg-red-400/10 px-2 py-0.5 text-xs font-medium text-red-300">
+                <span className="rounded-full border border-crimson-tint-border bg-crimson-tint px-3 py-1 text-[10.5px] font-semibold text-crimson">
                   Usuário banido por violar as regras da comunidade
                 </span>
               )}
             </div>
+            {profile.bio && (
+              <p className="mt-3.5 max-w-[58ch] text-[14.5px] font-normal leading-relaxed text-[#3C434C]">
+                {profile.bio}
+              </p>
+            )}
+            {(profile.brands.length > 0 || profile.item_types.length > 0) && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {profile.brands.map((brand) => (
+                  <span
+                    key={brand}
+                    className="rounded-full border border-sand-400 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.02em] text-[#5B6470]"
+                  >
+                    {brand}
+                  </span>
+                ))}
+                {profile.item_types.map((type) => (
+                  <span
+                    key={type}
+                    className="rounded-full border border-dourado-tint-border bg-dourado-tint px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.02em] text-dourado-dark"
+                  >
+                    {type}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {!isOwnProfile && user && (
-            <div className="flex flex-col items-stretch gap-2 sm:items-end">
+            <div className="flex min-w-[190px] flex-col gap-2">
               <a
                 href={`/transacoes/nova?vendedor=${profile.id}`}
-                className="inline-block bg-gold-500 px-4 py-2 text-center font-medium text-ink-950 transition hover:bg-gold-400"
+                className="rounded-lg bg-obsidian-900 px-[18px] py-3 text-center text-[11.5px] font-semibold uppercase tracking-[0.02em] text-white transition-colors hover:bg-dourado hover:text-obsidian-900"
               >
                 Registrar transação
               </a>
@@ -104,75 +147,122 @@ export default async function PerfilPage({ params }: Props) {
           {isOwnProfile && <EditProfileForm profile={profile} />}
         </div>
 
-        {profile.bio && <p className="relative mt-4 text-ink-200">{profile.bio}</p>}
-
-        <p className="relative mt-3 text-sm text-ink-400">{memberSince(profile.created_at)}</p>
-
-        {profile.brands.length > 0 && (
-          <div className="relative mt-3 flex flex-wrap gap-2">
-            {profile.brands.map((brand) => (
-              <span
-                key={brand}
-                className="border border-ink-600 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide text-ink-300"
-              >
-                {brand}
+        {/* Faixa clara: nota média + score */}
+        <div className="mt-[34px] grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] rounded-card border border-sand-300 bg-white">
+          <div className="border-r border-sand-200 p-5">
+            <p className="mb-2 text-[9.5px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+              Nota média
+            </p>
+            <p className="flex items-baseline gap-2">
+              <span className="font-serif text-4xl font-semibold leading-none text-dourado">
+                {profile.average_rating.toFixed(1).replace(".", ",")}
               </span>
-            ))}
-          </div>
-        )}
-
-        {profile.item_types.length > 0 && (
-          <div className="relative mt-2 flex flex-wrap gap-2">
-            {profile.item_types.map((type) => (
-              <span
-                key={type}
-                className="border border-gold-500/30 bg-gold-500/5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide text-gold-300"
-              >
-                {type}
+              <span className="text-[11px] font-normal text-[#8A8F98]">
+                {profile.reviews_count === 1 ? "1 avaliação" : `${profile.reviews_count} avaliações`}
               </span>
-            ))}
+            </p>
           </div>
-        )}
-
-        <div className="relative mt-6 grid grid-cols-2 gap-4 border-t border-ink-700 pt-6 sm:grid-cols-3">
-          <Stat label="Nota média">
-            <StarRating rating={profile.average_rating} reviewsCount={profile.reviews_count} />
-          </Stat>
-          <Stat label="Score de confiabilidade">
-            <TrustScoreBadge score={profile.trust_score} reviewsCount={profile.reviews_count} />
-          </Stat>
-          <Stat label="Recomendações">
-            <span className="text-xl font-bold text-ink-50">👍 {profile.recommendations_count}</span>
-          </Stat>
-          <Stat label="Vendas concluídas">
-            <span className="text-xl font-bold text-ink-50">{profile.completed_sales_count}</span>
-          </Stat>
-          <Stat label="Compras concluídas">
-            <span className="text-xl font-bold text-ink-50">{profile.completed_purchases_count}</span>
-          </Stat>
+          <div className="p-5">
+            <p className="mb-2 text-[9.5px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+              Score de confiabilidade
+            </p>
+            <p className="flex items-baseline gap-2">
+              <span className="text-[34px] font-semibold leading-none text-obsidian-900">
+                {profile.trust_score}
+              </span>
+              <span
+                className={`text-[11px] font-medium ${
+                  trustLevel === "alto"
+                    ? "text-verde"
+                    : trustLevel === "medio"
+                      ? "text-dourado-dark"
+                      : trustLevel === "baixo"
+                        ? "text-crimson"
+                        : "text-[#8A8F98]"
+                }`}
+              >
+                {TRUST_LEVEL_SHORT[trustLevel]}
+              </span>
+            </p>
+          </div>
         </div>
-      </section>
 
-      <section>
-        <h2 className="mb-4 font-serif text-lg font-light text-ink-50">Histórico de avaliações</h2>
+        {/* Três cards escuros */}
+        <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
+          <div className="rounded-card border border-obsidian-500 bg-obsidian-800 p-5">
+            <span className="block text-dourado">
+              <TagIcon />
+            </span>
+            <p className="mt-3.5 text-3xl font-semibold leading-none text-white">
+              {profile.completed_sales_count}
+            </p>
+            <p className="mt-2 text-[9.5px] font-semibold uppercase tracking-[0.02em] text-[#9AA1A9]">
+              Vendas realizadas
+            </p>
+          </div>
+          <div className="rounded-card border border-obsidian-500 bg-obsidian-800 p-5">
+            <span className="block text-dourado">
+              <BagIcon />
+            </span>
+            <p className="mt-3.5 text-3xl font-semibold leading-none text-white">
+              {profile.completed_purchases_count}
+            </p>
+            <p className="mt-2 text-[9.5px] font-semibold uppercase tracking-[0.02em] text-[#9AA1A9]">
+              Compras realizadas
+            </p>
+          </div>
+          <div className="rounded-card border border-obsidian-500 bg-obsidian-800 p-5">
+            <span className="block text-dourado">
+              <TrophyIcon />
+            </span>
+            <p className="mt-3.5 text-3xl font-semibold leading-none text-white">
+              {profile.recommendations_count}
+            </p>
+            <p className="mt-2 text-[9.5px] font-semibold uppercase tracking-[0.02em] text-[#9AA1A9]">
+              Indicações recebidas
+            </p>
+          </div>
+        </div>
+
+        {/* Faixa de destaque da nota */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-[18px] rounded-card border border-dourado/40 bg-obsidian-900 px-[26px] py-[22px]">
+          <span className="flex items-baseline gap-3">
+            <span className="font-serif text-[48px] font-semibold leading-none text-dourado">
+              {profile.average_rating.toFixed(1).replace(".", ",")}
+            </span>
+            <span className="text-[15px] font-medium text-[#6E757D]">/ 5,0</span>
+          </span>
+          <span className="min-w-[150px] flex-1">
+            <span className="block text-[9.5px] font-semibold uppercase tracking-[0.02em] text-[#9AA1A9]">
+              Nota média
+            </span>
+            <span className="mt-1.5 block text-[13px] font-normal text-[#C9CDD3]">
+              {profile.reviews_count === 1 ? "1 avaliação recebida" : `${profile.reviews_count} avaliações recebidas`}
+            </span>
+          </span>
+          <span className="relative inline-block w-max text-[19px] leading-none tracking-[0.02em]" aria-hidden="true">
+            <span className="text-obsidian-500">★★★★★</span>
+            <span className="absolute left-0 top-0 overflow-hidden whitespace-nowrap text-dourado" style={{ width: `${starPct}%` }}>
+              ★★★★★
+            </span>
+          </span>
+        </div>
+
+        <h2 className="mb-1.5 mt-11 text-xl font-bold text-obsidian-900">
+          Histórico de transações e avaliações
+        </h2>
+        <p className="mb-6 text-[13px] font-normal text-[#8A8F98]">
+          Só transações confirmadas pelas duas partes aparecem aqui.
+        </p>
         <ReviewList reviews={reviews ?? []} />
-      </section>
 
-      {!isOwnProfile && user && (
-        <section>
-          <h2 className="mb-4 font-serif text-lg font-light text-ink-50">Algo errado?</h2>
-          <ReportForm reportedId={profile.id} reportedName={profile.full_name} currentUserId={user.id} />
-        </section>
-      )}
-    </div>
-  );
-}
-
-function Stat({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="mb-1 text-xs uppercase tracking-wide text-ink-400">{label}</p>
-      {children}
+        {!isOwnProfile && user && (
+          <>
+            <h2 className="mb-4 mt-11 text-xl font-bold text-obsidian-900">Algo errado?</h2>
+            <ReportForm reportedId={profile.id} reportedName={profile.full_name} currentUserId={user.id} />
+          </>
+        )}
+      </div>
     </div>
   );
 }

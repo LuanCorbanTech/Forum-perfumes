@@ -12,11 +12,19 @@ export function getTrustLevel(score: number, reviewsCount: number): TrustLevel {
   return "baixo";
 }
 
+// Rótulo curto usado ao lado do número do score no perfil (ex.: "92 alta").
+export const TRUST_LEVEL_SHORT: Record<TrustLevel, string> = {
+  alto: "alta",
+  medio: "média",
+  baixo: "baixa",
+  novo: "novo vendedor",
+};
+
 export const TRUST_LEVEL_COPY: Record<TrustLevel, { label: string; className: string }> = {
-  alto: { label: "Alta confiabilidade", className: "bg-emerald-400/10 text-emerald-300 border-emerald-400/30" },
-  medio: { label: "Confiabilidade média", className: "bg-gold-400/10 text-gold-300 border-gold-400/30" },
-  baixo: { label: "Baixa confiabilidade", className: "bg-red-400/10 text-red-300 border-red-400/30" },
-  novo: { label: "Vendedor novo", className: "bg-ink-500/20 text-ink-200 border-ink-400/30" },
+  alto: { label: "Alta confiabilidade", className: "bg-verde-tint text-verde border-verde-tint-border" },
+  medio: { label: "Confiabilidade média", className: "bg-dourado-tint text-dourado-dark border-dourado-tint-border" },
+  baixo: { label: "Baixa confiabilidade", className: "bg-crimson-tint text-crimson border-crimson-tint-border" },
+  novo: { label: "Vendedor novo", className: "bg-sand-200 text-[#5B6470] border-sand-300" },
 };
 
 export function formatRating(rating: number): string {

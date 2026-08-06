@@ -74,135 +74,165 @@ export function LoginForm() {
   }
 
   return (
-    <div className="mx-auto max-w-sm rounded-2xl border border-ink-700 bg-ink-800/60 p-6 sm:p-8">
-      <h1 className="mb-1 font-serif text-2xl font-light text-ink-50">Entrar no Cheiro Novo</h1>
-      <p className="mb-6 text-sm text-ink-300">
+    <div className="mx-auto max-w-[420px]">
+      <p className="mb-3 text-center text-[10px] font-semibold uppercase tracking-[0.02em] text-dourado">
+        Acesso
+      </p>
+      <h1 className="mb-2 text-center font-serif text-4xl font-medium leading-none text-obsidian-900">
+        Entrar no Cheiro Novo
+      </h1>
+      <p className="mb-7 text-center text-sm font-normal text-[#5B6470]">
         Use seu telefone ou e-mail. Enviaremos um código de confirmação.
       </p>
 
-      {step === "identify" && (
-        <>
-          <div className="mb-4 flex rounded-lg border border-ink-600 p-1">
-            <button
-              type="button"
-              onClick={() => setMethod("phone")}
-              className={`flex-1 rounded-md py-2 text-sm font-medium transition ${
-                method === "phone" ? "bg-gold-500 text-ink-950" : "text-ink-300"
-              }`}
-            >
-              Telefone
-            </button>
-            <button
-              type="button"
-              onClick={() => setMethod("email")}
-              className={`flex-1 rounded-md py-2 text-sm font-medium transition ${
-                method === "email" ? "bg-gold-500 text-ink-950" : "text-ink-300"
-              }`}
-            >
-              E-mail
-            </button>
-          </div>
-
-          <form onSubmit={handleSendCode} className="space-y-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-ink-200">
-                Nome completo <span className="text-ink-400">(primeiro acesso)</span>
-              </label>
-              <input
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Como quer ser identificado no Cheiro Novo"
-                className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-sm text-ink-50 placeholder-ink-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
-              />
+      <div className="rounded-card border border-sand-300 bg-white p-[26px]">
+        {step === "identify" && (
+          <>
+            <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg border border-sand-300 p-1">
+              <button
+                type="button"
+                onClick={() => setMethod("phone")}
+                className={`rounded-md py-[9px] text-[13px] font-medium transition-colors ${
+                  method === "phone" ? "bg-obsidian-900 text-white" : "text-[#5B6470]"
+                }`}
+              >
+                Telefone
+              </button>
+              <button
+                type="button"
+                onClick={() => setMethod("email")}
+                className={`rounded-md py-[9px] text-[13px] font-medium transition-colors ${
+                  method === "email" ? "bg-obsidian-900 text-white" : "text-[#5B6470]"
+                }`}
+              >
+                E-mail
+              </button>
             </div>
 
-            {method === "phone" ? (
+            <form onSubmit={handleSendCode} className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-ink-200">Telefone (com DDD)</label>
+                <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                  Nome completo{" "}
+                  <span className="font-normal normal-case tracking-normal text-[#B4AEA3]">(primeiro acesso)</span>
+                </label>
                 <input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+55 11 99999-8888"
-                  required
-                  className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-sm text-ink-50 placeholder-ink-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Como quer ser identificado no Cheiro Novo"
+                  className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
                 />
               </div>
-            ) : (
-              <div>
-                <label className="mb-1 block text-sm font-medium text-ink-200">E-mail</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="voce@email.com"
-                  required
-                  className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-sm text-ink-50 placeholder-ink-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
-                />
-              </div>
+
+              {method === "phone" ? (
+                <div>
+                  <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                    Telefone (com DDD)
+                  </label>
+                  <input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+55 11 99999-8888"
+                    required
+                    className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                    E-mail
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="voce@email.com"
+                    required
+                    className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+                  />
+                </div>
+              )}
+
+              {error && (
+                <p className="rounded-lg border border-crimson-tint-border bg-crimson-tint p-2.5 text-[12.5px] text-crimson">
+                  {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-lg bg-obsidian-900 py-3.5 text-[11.5px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:opacity-50 hover:bg-dourado hover:text-obsidian-900"
+              >
+                {loading ? "Enviando..." : "Enviar código"}
+              </button>
+
+              <p className="text-center text-[11.5px] font-normal leading-relaxed text-[#8A8F98]">
+                Ao continuar, você concorda com os{" "}
+                <a
+                  href="/termos"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="border-b border-dourado-tint-border text-dourado-dark"
+                >
+                  termos de uso
+                </a>{" "}
+                e as{" "}
+                <a
+                  href="/regras"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="border-b border-dourado-tint-border text-dourado-dark"
+                >
+                  regras do fórum
+                </a>
+                .
+              </p>
+            </form>
+          </>
+        )}
+
+        {step === "verify" && (
+          <form onSubmit={handleVerifyCode} className="space-y-3.5">
+            <p className="text-sm font-normal leading-relaxed text-[#3C434C]">
+              Enviamos {method === "phone" ? "um código" : "um e-mail de confirmação"} para{" "}
+              {method === "phone" ? normalizePhone(phone) : email}.
+            </p>
+            {method === "email" && (
+              <p className="rounded-lg border border-dourado-tint-border bg-dourado-tint p-3 text-[12.5px] font-normal leading-relaxed text-[#5B6470]">
+                Mais fácil: abra o e-mail e clique no link &ldquo;Entrar&rdquo;, isso já faz login
+                direto, sem precisar digitar nada aqui. O campo abaixo só funciona se o código
+                aparecer no corpo do e-mail.
+              </p>
             )}
-
-            {error && <p className="rounded bg-red-400/10 p-2 text-sm text-red-300">{error}</p>}
-
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="Código de 6 dígitos"
+              required
+              className="h-[52px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[17px] font-semibold tracking-[0.02em] text-obsidian-900 placeholder-[#A0A5AC] placeholder:text-[14px] placeholder:font-normal focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+            />
+            {error && (
+              <p className="rounded-lg border border-crimson-tint-border bg-crimson-tint p-2.5 text-[12.5px] text-crimson">
+                {error}
+              </p>
+            )}
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-gold-500 py-2 font-medium text-ink-950 transition disabled:opacity-50 hover:bg-gold-400"
+              className="w-full rounded-lg bg-obsidian-900 py-3.5 text-[11.5px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:opacity-50 hover:bg-dourado hover:text-obsidian-900"
             >
-              {loading ? "Enviando..." : "Enviar código"}
+              {loading ? "Verificando..." : "Confirmar código"}
             </button>
-
-            <p className="text-center text-[11px] leading-relaxed text-ink-500">
-              Ao continuar, você concorda com os{" "}
-              <a href="/termos" target="_blank" rel="noreferrer" className="text-gold-400 hover:underline">
-                termos de uso
-              </a>{" "}
-              e as{" "}
-              <a href="/regras" target="_blank" rel="noreferrer" className="text-gold-400 hover:underline">
-                regras do fórum
-              </a>
-              .
-            </p>
+            <button
+              type="button"
+              onClick={() => setStep("identify")}
+              className="w-full text-center text-[12.5px] font-normal text-[#8A8F98] transition-colors hover:text-obsidian-900"
+            >
+              Voltar
+            </button>
           </form>
-        </>
-      )}
-
-      {step === "verify" && (
-        <form onSubmit={handleVerifyCode} className="space-y-3">
-          <p className="text-sm text-ink-300">
-            Enviamos {method === "phone" ? "um código" : "um e-mail de confirmação"} para{" "}
-            {method === "phone" ? normalizePhone(phone) : email}.
-          </p>
-          {method === "email" && (
-            <p className="rounded-lg border border-gold-400/20 bg-gold-400/5 p-2.5 text-xs leading-relaxed text-ink-300">
-              Mais fácil: abra o e-mail e clique no link &ldquo;Entrar&rdquo; — isso já faz login
-              direto, sem precisar digitar nada aqui. O campo abaixo só funciona se o código
-              aparecer no corpo do e-mail.
-            </p>
-          )}
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="Código de 6 dígitos"
-            required
-            className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-sm tracking-widest text-ink-50 placeholder-ink-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
-          />
-          {error && <p className="rounded bg-red-400/10 p-2 text-sm text-red-300">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-gold-500 py-2 font-medium text-ink-950 transition disabled:opacity-50 hover:bg-gold-400"
-          >
-            {loading ? "Verificando..." : "Confirmar código"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setStep("identify")}
-            className="w-full text-sm text-ink-400 hover:text-ink-200"
-          >
-            Voltar
-          </button>
-        </form>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
+import Link from "next/link";
 import { SearchBar } from "@/components/SearchBar";
-import { SellerCard } from "@/components/SellerCard";
+import { Avatar } from "@/components/Avatar";
 import { createClient } from "@/lib/supabase/server";
-import { isVerifiedSeller } from "@/lib/trustScore";
 import { normalizeProfile } from "@/lib/normalizeProfile";
 import type { Profile } from "@/lib/types";
 
@@ -34,24 +34,65 @@ export default async function BuscaPage({ searchParams }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="font-serif text-2xl font-light text-ink-50">Buscar membro</h1>
+    <div>
+      <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.02em] text-dourado">Busca</p>
+      <h1 className="mb-6 font-serif text-4xl font-medium leading-none text-obsidian-900">
+        Procurar um membro
+      </h1>
       <SearchBar />
 
       {q ? (
         results.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {results.map((profile) => (
-              <SellerCard key={profile.id} profile={profile} verified={isVerifiedSeller(profile)} />
-            ))}
-          </div>
+          <>
+            <p className="mb-5 mt-7 text-xs font-normal text-[#5B6470]">
+              {results.length === 1 ? "1 resultado" : `${results.length} resultados`} para{" "}
+              <span className="font-medium text-obsidian-900">&ldquo;{q}&rdquo;</span>
+            </p>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {results.map((profile) => {
+                const starPct = Math.min(100, Math.max(0, (profile.average_rating / 5) * 100));
+                return (
+                  <Link
+                    key={profile.id}
+                    href={`/perfil/${profile.id}`}
+                    className="flex items-start gap-3.5 rounded-card border border-sand-300 bg-white p-[18px] transition-colors hover:border-dourado"
+                  >
+                    <Avatar fullName={profile.full_name} avatarUrl={profile.avatar_url} size={44} variant="dark-square" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15.5px] font-semibold leading-tight text-obsidian-900">
+                        {profile.full_name}
+                      </span>
+                      <span className="mt-1 block text-[11px] font-normal text-[#8A8F98]">
+                        {profile.city ?? "Local não informado"} ·{" "}
+                        {profile.reviews_count === 1 ? "1 avaliação" : `${profile.reviews_count} avaliações`}
+                      </span>
+                      <span className="mt-2.5 flex items-center gap-2.5">
+                        <span className="font-serif text-2xl font-semibold leading-none text-dourado">
+                          {profile.average_rating.toFixed(1).replace(".", ",")}
+                        </span>
+                        <span className="relative inline-block w-max text-xs leading-none tracking-[0.02em]" aria-hidden="true">
+                          <span className="text-[#E2DCD1]">★★★★★</span>
+                          <span
+                            className="absolute left-0 top-0 overflow-hidden whitespace-nowrap text-dourado"
+                            style={{ width: `${starPct}%` }}
+                          >
+                            ★★★★★
+                          </span>
+                        </span>
+                      </span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </>
         ) : (
-          <p className="text-ink-300">
-            Nenhum membro encontrado para &quot;{q}&quot;. Verifique o nome ou telefone informado.
+          <p className="mt-7 text-[#5B6470]">
+            Nenhum membro encontrado para &ldquo;{q}&rdquo;. Verifique o nome ou telefone informado.
           </p>
         )
       ) : (
-        <p className="text-ink-300">Digite um nome ou telefone para começar a busca.</p>
+        <p className="mt-7 text-[#5B6470]">Digite um nome ou telefone para começar a busca.</p>
       )}
     </div>
   );

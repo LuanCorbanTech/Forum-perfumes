@@ -5,37 +5,83 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Dourado — acento principal (extraído da paleta oficial do Cheiro Novo).
+        // Dourado — acento (paleta clara/azul-marinho/dourado do novo brief).
         gold: {
-          50: "#fbf3e4",
-          100: "#f6e8cc",
-          200: "#f0dcae", // acento claro, itálicos, hover mais forte
-          300: "#e8cc9e", // foco em inputs / hover secundário
-          400: "#d8bd85", // hover de botões/links
-          500: "#c8a86b", // dourado principal (botões, bordas de destaque)
-          600: "#a8874f",
-          700: "#815f34",
-          800: "#5c4222",
-          900: "#3a2914",
+          50: "#fbf3e0",
+          100: "#f5e6c4",
+          200: "#ebd9a5",
+          300: "#e3c687",
+          400: "#d4af37",
+          500: "#c5a059", // dourado principal (acentos, badges, bordas)
+          600: "#a9853f",
+          700: "#8a6b31",
+          800: "#6b5326",
+          900: "#4a3a1b",
         },
-        // Fundo/superfícies — quase-preto quente extraído do design (não é
-        // um cinza neutro), com camadas para fundo de página, cartões e bordas.
-        ink: {
-          50: "#f2ede4", // texto de destaque / títulos
-          100: "#d5cec4", // texto secundário forte
-          200: "#b9b1a6", // links de navegação, texto médio
-          300: "#a29a8f", // parágrafos
-          400: "#8b8378", // rótulos uppercase, placeholders
-          500: "#6f6860", // texto bem discreto (timestamps, rodapé)
-          600: "#322f2a", // bordas de inputs/avatares
-          700: "#241f1b", // bordas de cartões/seções
-          800: "#171514", // fundo de cartões
-          900: "#131211", // fundo da página
-          950: "#0d0c0b", // fundo mais escuro (barras de topo) / texto sobre dourado
+        // Azul-marinho/grafite — texto e superfícies escuras sobre fundo claro.
+        // (tema anterior — mantido só para as telas que ainda não passaram
+        // pelo redesign "handoff"; não usar em código novo.)
+        navy: {
+          50: "#f8f9fa", // fundo de página
+          100: "#f1f3f5",
+          200: "#eef0f2", // bordas de cartões/seções
+          300: "#cbd3dc",
+          400: "#94a3b8", // texto discreto, placeholders
+          500: "#64748b", // texto secundário
+          600: "#475569", // texto de corpo
+          700: "#334155",
+          800: "#1e293b", // títulos, texto principal
+          900: "#0f172a", // botões primários, texto mais escuro
+        },
+
+        // ==== Tokens do redesign "handoff" (design_handoff_cheiro_novo) ====
+        // Obsidiana — header, footer, painéis e cartões escuros.
+        obsidian: {
+          950: "#0b0e11",
+          900: "#12161a", // fundo escuro principal (header, footer, cabeçalho do card)
+          800: "#1a2026", // pílulas sociais, cartões de estatística do perfil
+          700: "#1e242b", // fundo do avatar de iniciais
+          600: "#23282e", // borda em fundo escuro (header/footer)
+          500: "#2c3238", // borda dos cartões escuros
+          400: "#333a42", // borda do avatar / moldura do iPhone
+        },
+        // Creme/areia — fundo da página e bordas em fundo claro.
+        sand: {
+          DEFAULT: "#faf8f5", // fundo da página
+          100: "#f1ede6", // avatar de iniciais na linha do tempo
+          200: "#efebe3", // divisórias internas dos cards
+          300: "#e6e1d8", // borda principal em fundo claro
+          400: "#d9d2c6", // borda de inputs
+        },
+        // Dourado/âmbar — acento (equivalente ao "gold" do redesign anterior,
+        // mas com os hex exatos do handoff).
+        dourado: {
+          DEFAULT: "#c59b27",
+          hover: "#d8ae38",
+          dark: "#8a6b31", // texto sobre fundo âmbar-tênue
+          tint: "#fbf6e9", // fundo âmbar tênue
+          "tint-border": "#ebd9a5",
+        },
+        // Esmeralda — selo "verificado" e estados de sucesso.
+        verde: {
+          DEFAULT: "#15803d",
+          light: "#6fcf8f", // texto claro sobre fundo escuro
+          dark: "#16241b", // fundo do selo em contexto escuro
+          "dark-border": "#2c4634",
+          tint: "#f0f7f2", // fundo tênue em contexto claro
+          "tint-border": "#cbe3d4",
+        },
+        // Vermelho — erro / denúncia procedente.
+        crimson: {
+          DEFAULT: "#b42318",
+          tint: "#fdf2f2",
+          "tint-border": "#f3cfcf",
         },
       },
       fontFamily: {
+        // Cormorant Garamond — logotipo, h1 de tela e notas de destaque grandes.
         serif: ["var(--font-display)", "Georgia", "Cambria", "Times New Roman", "serif"],
+        // Montserrat — todo o resto: corpo, UI, botões, tags, h2, números.
         sans: [
           "var(--font-body)",
           "ui-sans-serif",
@@ -44,28 +90,19 @@ const config: Config = {
           "system-ui",
           "sans-serif",
         ],
-        // Fallback com fontes monoespaçadas nomeadas (não só o genérico
-        // "monospace", que no Windows costuma virar Courier New e fica
-        // bem mais grosseiro nos rótulos pequenos em caixa alta).
         mono: [
-          "var(--font-mono)",
-          "ui-monospace",
-          "SFMono-Regular",
-          "Menlo",
-          "Consolas",
-          "monospace",
+          "var(--font-body)",
+          "ui-sans-serif",
+          "-apple-system",
+          "Segoe UI",
+          "system-ui",
+          "sans-serif",
         ],
       },
-      // Estética de joalheria: cantos quase retos em vez de arredondados.
       borderRadius: {
-        none: "0px",
-        sm: "1px",
-        DEFAULT: "2px",
-        md: "2px",
-        lg: "2px",
-        xl: "3px",
-        "2xl": "3px",
-        full: "9999px",
+        // Raio de 10px usado nos cards/painéis do redesign "handoff"
+        // (não existe na escala padrão do Tailwind, que pula de 8 pra 12).
+        card: "10px",
       },
       backgroundImage: {
         "radial-fade": "radial-gradient(circle at 50% 0%, var(--tw-gradient-stops))",

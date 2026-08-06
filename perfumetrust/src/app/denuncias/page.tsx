@@ -3,11 +3,18 @@ import Link from "next/link";
 import { REPORT_REASON_LABELS, type Report } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 
-const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  pending: { label: "Pendente", className: "bg-yellow-400/10 text-yellow-300" },
-  under_review: { label: "Em análise", className: "bg-blue-400/10 text-blue-300" },
-  approved: { label: "Procedente", className: "bg-emerald-400/10 text-emerald-300" },
-  rejected: { label: "Improcedente", className: "bg-ink-600/40 text-ink-300" },
+const STATUS_STYLE: Record<string, string> = {
+  pending: "bg-dourado-tint border-dourado-tint-border text-dourado-dark",
+  under_review: "bg-white border-sand-400 text-[#5B6470]",
+  approved: "bg-verde-tint border-verde-tint-border text-verde",
+  rejected: "bg-sand border-sand-300 text-[#8A8F98]",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: "Pendente",
+  under_review: "Em análise",
+  approved: "Procedente",
+  rejected: "Improcedente",
 };
 
 export default async function MinhasDenunciasPage() {
@@ -25,28 +32,40 @@ export default async function MinhasDenunciasPage() {
     .returns<Report[]>();
 
   return (
-    <div className="space-y-6">
-      <h1 className="font-serif text-2xl font-light text-ink-50">Minhas denúncias</h1>
+    <div className="space-y-7">
+      <div>
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.02em] text-dourado">
+          suas denúncias
+        </p>
+        <h1 className="font-serif text-[32px] font-medium leading-none text-obsidian-900">Minhas denúncias</h1>
+      </div>
 
       {reports && reports.length > 0 ? (
-        <ul className="space-y-3">
+        <ul className="grid gap-4">
           {reports.map((report) => (
-            <li key={report.id} className="rounded-lg border border-ink-700 bg-ink-800/60 p-4">
-              <div className="flex items-center justify-between">
-                <Link href={`/perfil/${report.reported_id}`} className="font-medium text-gold-300 hover:underline">
+            <li key={report.id} className="rounded-card border border-sand-300 bg-white p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2.5">
+                <Link
+                  href={`/perfil/${report.reported_id}`}
+                  className="border-b border-dourado-tint-border text-[15.5px] font-semibold text-obsidian-900"
+                >
                   {report.reported?.full_name ?? "Usuário"}
                 </Link>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_LABELS[report.status].className}`}>
-                  {STATUS_LABELS[report.status].label}
+                <span
+                  className={`rounded-full border px-2.5 py-1 text-[10.5px] font-medium ${STATUS_STYLE[report.status]}`}
+                >
+                  {STATUS_LABELS[report.status]}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-ink-400">{REPORT_REASON_LABELS[report.reason]}</p>
-              <p className="mt-1 text-sm text-ink-200">{report.description}</p>
+              <p className="mt-3.5 text-[10px] font-semibold uppercase tracking-[0.02em] text-dourado">
+                {REPORT_REASON_LABELS[report.reason]}
+              </p>
+              <p className="mt-2 text-sm font-normal leading-relaxed text-[#3C434C]">{report.description}</p>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-ink-400">Você ainda não enviou nenhuma denúncia.</p>
+        <p className="text-[#8A8F98]">Você ainda não enviou nenhuma denúncia.</p>
       )}
     </div>
   );

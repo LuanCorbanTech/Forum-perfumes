@@ -1,25 +1,25 @@
 import Link from "next/link";
 import { SellerCard } from "@/components/SellerCard";
-import { BrandFilterTabs } from "@/components/BrandFilterTabs";
+import { Avatar } from "@/components/Avatar";
+import { SearchBar } from "@/components/SearchBar";
+import { TestimonialCarousel } from "@/components/TestimonialCarousel";
 import { createClient } from "@/lib/supabase/server";
 import { isVerifiedSeller } from "@/lib/trustScore";
 import { normalizeProfile } from "@/lib/normalizeProfile";
-import { initials } from "@/lib/initials";
 import type { Profile } from "@/lib/types";
 
 interface Props {
-  searchParams: Promise<{ marca?: string; sort?: string }>;
+  searchParams: Promise<{ filter?: string }>;
 }
 
 export default async function HomePage({ searchParams }: Props) {
-  const { marca, sort } = await searchParams;
+  const { filter } = await searchParams;
   const supabase = await createClient();
 
   let query = supabase.from("profiles").select("*", { count: "exact" }).eq("is_banned", false);
-  if (marca) query = query.contains("brands", [marca]);
   query =
-    sort === "recentes"
-      ? query.order("created_at", { ascending: false })
+    filter === "vendedores"
+      ? query.order("completed_sales_count", { ascending: false })
       : query.order("trust_score", { ascending: false });
 
   const { data: sellersRaw, count: filteredCount } = await query.limit(9).returns<Profile[]>();
@@ -80,61 +80,93 @@ export default async function HomePage({ searchParams }: Props) {
     .returns<Profile[]>();
   const highlighted = (highlightedRaw ?? []).map(normalizeProfile);
 
+  const activeFilter = filter === "vendedores" ? "vendedores" : "todos";
+
   return (
-    <div className="space-y-0 -mt-10 -mx-4 sm:-mx-7">
-      <section className="border-b border-ink-700 bg-gradient-to-b from-ink-800 to-ink-900">
-        <div className="mx-auto grid max-w-6xl gap-12 px-4 py-14 sm:px-7 sm:py-16 lg:grid-cols-[1.15fr_1fr] lg:items-end">
-          <div>
-            <p className="mb-5 font-mono text-[10.5px] uppercase tracking-[0.26em] text-gold-500">
-              diretório de reputação
-            </p>
-            <h1 className="font-serif text-4xl font-light leading-[1.05] text-ink-50 sm:text-[3.4rem]">
-              Confira quem é
-              <br />
-              <em className="italic text-gold-300">confiável</em> antes de
-              <br />
-              fechar o próximo negócio.
-            </h1>
-            <p className="mt-6 max-w-[46ch] text-[15px] leading-relaxed text-ink-300">
-              Perfis de avaliação de compradores e vendedores do grupo de desapego: histórico de
-              transações, avaliações e reputação à mostra antes de você negociar.
-            </p>
+    <div className="-mx-4 -mt-10 space-y-0 sm:-mx-7">
+      {/* ================= HERO ================= */}
+      <section className="relative overflow-hidden border-b border-sand-300">
+        <span
+          aria-hidden="true"
+          className="hero-aura pointer-events-none absolute left-[-6%] top-[34%] z-0 h-[460px] w-[460px] rounded-full opacity-[0.15] blur-[140px]"
+          style={{
+            background: "radial-gradient(circle, #C59B27 0%, rgba(197,155,39,0) 70%)",
+            animation: "auraA 10s ease-in-out infinite",
+          }}
+        />
+        <span
+          aria-hidden="true"
+          className="hero-aura pointer-events-none absolute bottom-[-14%] left-[26%] z-0 h-[420px] w-[420px] rounded-full opacity-[0.12] blur-[140px]"
+          style={{
+            background: "radial-gradient(circle, #15803D 0%, rgba(21,128,61,0) 70%)",
+            animation: "auraB 12s ease-in-out infinite",
+          }}
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-[1] opacity-50 mix-blend-multiply"
+          style={{
+            backgroundImage:
+              "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E\")",
+          }}
+        />
+
+        <div className="relative z-[2] mx-auto max-w-6xl px-4 py-14 sm:px-7">
+          <div className="grid grid-cols-1 items-start gap-9 min-[900px]:grid-cols-[1fr_372px] min-[900px]:items-center">
+            <div>
+              <p className="mb-[18px] text-[10px] font-semibold uppercase tracking-[0.02em] text-dourado">
+                Diretório de reputação · desde 2023
+              </p>
+              <h1 className="max-w-[15ch] font-serif text-[46px] font-medium leading-[1.04] text-obsidian-900">
+                Saiba com quem você está negociando.
+              </h1>
+              <p className="mt-5 max-w-[52ch] text-[15px] font-normal leading-relaxed text-[#5B6470]">
+                Histórico de transações, avaliações e reputação de compradores e vendedores do grupo de
+                desapego, tudo à mostra antes do primeiro pix.
+              </p>
+
+              <div className="mt-8 max-w-[620px]">
+                <SearchBar />
+              </div>
+            </div>
+
+            <div className="justify-self-center">
+              <TestimonialCarousel />
+            </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-px overflow-hidden border border-ink-700 bg-ink-700">
-            <HeroStat value={(totalProfiles ?? 0).toLocaleString("pt-BR")} label="vendedores cadastrados" />
-            <HeroStat value={avgRating !== null ? avgRating.toFixed(1).replace(".", ",") : "—"} label={"nota média\ndos vendedores"} gold />
-            <HeroStat value={(completedTx ?? 0).toLocaleString("pt-BR")} label={"transações\nconcluídas"} />
+          <div className="mt-10 grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-7 rounded-card border border-dourado bg-obsidian-900 px-7 py-[26px]">
+            <MetricStat value={(totalProfiles ?? 0).toLocaleString("pt-BR")} label="membros cadastrados" />
+            <MetricStat
+              value={avgRating !== null ? avgRating.toFixed(1).replace(".", ",") : "—"}
+              label="nota média"
+              gold
+            />
+            <MetricStat value={(completedTx ?? 0).toLocaleString("pt-BR")} label="transações concluídas" />
           </div>
         </div>
       </section>
 
-      <div className="border-b border-ink-700 bg-ink-900">
-        <div className="mx-auto max-w-6xl px-4 sm:px-7">
-          <BrandFilterTabs />
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-7">
+      {/* ================= GRID DE MEMBROS ================= */}
+      <div className="mx-auto max-w-6xl px-4 py-11 sm:px-7">
         <div className="grid gap-10 lg:grid-cols-[1fr_300px]">
           <div>
-            <div className="mb-6 flex items-baseline justify-between">
-              <h2 className="font-serif text-2xl text-ink-50">
-                Vendedores verificados <span className="text-ink-500">{filteredCount ?? 0}</span>
+            <div className="mb-[26px] flex flex-wrap items-baseline justify-between gap-4">
+              <h2 className="text-xl font-bold text-obsidian-900">
+                Membros avaliados <span className="text-[#B4AEA3]">{filteredCount ?? 0}</span>
               </h2>
-              <div className="flex items-center gap-4 font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-500">
-                <span>todas as marcas</span>
-                <Link
-                  href={sort === "recentes" ? "/" : "/?sort=recentes"}
-                  className="text-gold-500 hover:text-gold-400"
-                >
-                  recentes ↓
-                </Link>
+              <div className="flex flex-wrap gap-2">
+                <FilterPill href="/" active={activeFilter === "todos"}>
+                  Todos
+                </FilterPill>
+                <FilterPill href="/?filter=vendedores" active={activeFilter === "vendedores"}>
+                  Top vendedores
+                </FilterPill>
               </div>
             </div>
 
             {sellers && sellers.length > 0 ? (
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-5 [grid-template-columns:repeat(auto-fill,minmax(320px,1fr))]">
                 {sellers.map((profile) => (
                   <SellerCard
                     key={profile.id}
@@ -146,33 +178,29 @@ export default async function HomePage({ searchParams }: Props) {
                 ))}
               </div>
             ) : (
-              <p className="text-ink-400">
-                {marca
-                  ? `Ainda não há vendedores cadastrados para ${marca}.`
-                  : "Ainda não há vendedores avaliados. Seja o primeiro a construir sua reputação!"}
+              <p className="text-[#8A8F98]">
+                Ainda não há membros avaliados. Seja o primeiro a construir sua reputação!
               </p>
             )}
           </div>
 
           <aside className="space-y-5">
             {highlighted && highlighted.length > 0 && (
-              <div className="border border-ink-700 bg-ink-800 p-5">
-                <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.2em] text-gold-500">
+              <div className="rounded-card border border-sand-300 bg-white p-5">
+                <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.02em] text-dourado">
                   gente boa da semana
                 </p>
                 <div className="flex flex-col gap-4">
                   {highlighted.map((p) => (
                     <Link key={p.id} href={`/perfil/${p.id}`} className="flex items-center gap-3">
-                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-ink-600 bg-ink-700 font-serif text-[13px] text-gold-500">
-                        {initials(p.full_name)}
-                      </span>
+                      <Avatar fullName={p.full_name} avatarUrl={p.avatar_url} size={32} variant="light-circle" />
                       <span className="flex min-w-0 flex-col gap-0.5">
-                        <span className="truncate text-[13px] text-ink-50">{p.full_name}</span>
-                        <span className="font-mono text-[9.5px] text-ink-500">
+                        <span className="truncate text-[13px] font-medium text-obsidian-900">{p.full_name}</span>
+                        <span className="text-[11px] font-normal text-[#8A8F98]">
                           ★ {p.average_rating.toFixed(1).replace(".", ",")} · {p.completed_sales_count} vendas
                         </span>
                       </span>
-                      <span className="ml-auto whitespace-nowrap border border-ink-600 px-1.5 py-0.5 font-mono text-[8.5px] uppercase tracking-wide text-ink-400">
+                      <span className="ml-auto whitespace-nowrap rounded-full border border-sand-400 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.02em] text-[#5B6470]">
                         {highlightBadge(p)}
                       </span>
                     </Link>
@@ -187,14 +215,29 @@ export default async function HomePage({ searchParams }: Props) {
   );
 }
 
-function HeroStat({ value, label, gold }: { value: string; label: string; gold?: boolean }) {
+function MetricStat({ value, label, gold }: { value: string; label: string; gold?: boolean }) {
   return (
-    <div className="bg-ink-800 px-5 py-6">
-      <p className={`font-serif text-4xl leading-none ${gold ? "text-gold-300" : "text-ink-50"}`}>{value}</p>
-      <p className="mt-3 whitespace-pre-line font-mono text-[10px] uppercase leading-relaxed tracking-[0.16em] text-ink-400">
-        {label}
+    <div>
+      <p className={`font-sans text-[30px] font-semibold leading-none ${gold ? "font-serif text-[34px] text-dourado" : "text-white"}`}>
+        {value}
       </p>
+      <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.02em] text-[#9AA1A9]">{label}</p>
     </div>
+  );
+}
+
+function FilterPill({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-full px-3.5 py-[7px] text-[11px] font-semibold uppercase tracking-[0.02em] transition-colors ${
+        active
+          ? "border border-obsidian-900 bg-obsidian-900 text-white"
+          : "border border-sand-400 text-[#5B6470] hover:border-dourado hover:text-dourado"
+      }`}
+    >
+      {children}
+    </Link>
   );
 }
 

@@ -7,33 +7,32 @@ interface StarRatingProps {
   showNumber?: boolean;
 }
 
-const SIZE_CLASS = {
-  sm: "text-sm",
-  md: "text-base",
-  lg: "text-2xl",
+const SIZE_PX = {
+  sm: 12,
+  md: 14,
+  lg: 19,
 };
 
 export function StarRating({ rating, reviewsCount, size = "md", showNumber = true }: StarRatingProps) {
-  const rounded = Math.round(rating * 2) / 2; // arredonda para 0.5 mais próximo
+  const starWidth = `${Math.min(100, Math.max(0, (rating / 5) * 100))}%`;
 
   return (
-    <div className={`flex items-center gap-1 ${SIZE_CLASS[size]}`} aria-label={`Nota ${rating} de 5`}>
-      <div className="flex text-gold-400" aria-hidden="true">
-        {Array.from({ length: 5 }).map((_, i) => {
-          const filled = i + 1 <= rounded;
-          const half = !filled && i + 0.5 === rounded;
-          return (
-            <span key={i} className={`relative ${!filled && !half ? "text-ink-500" : ""}`}>
-              {half ? "★" : filled ? "★" : "☆"}
-            </span>
-          );
-        })}
-      </div>
+    <div className="flex items-center gap-2" aria-label={`Nota ${rating} de 5`}>
+      <span
+        className="relative inline-block w-max leading-none tracking-[0.02em]"
+        style={{ fontSize: SIZE_PX[size] }}
+        aria-hidden="true"
+      >
+        <span className="text-[#E2DCD1]">★★★★★</span>
+        <span className="absolute left-0 top-0 overflow-hidden whitespace-nowrap text-dourado" style={{ width: starWidth }}>
+          ★★★★★
+        </span>
+      </span>
       {showNumber && (
-        <span className="font-medium text-ink-100">
+        <span className="font-sans text-sm font-medium text-navy-600">
           {formatRating(rating)}
           {typeof reviewsCount === "number" && (
-            <span className="font-normal text-ink-400"> ({reviewsCount})</span>
+            <span className="font-normal text-navy-400"> ({reviewsCount})</span>
           )}
         </span>
       )}

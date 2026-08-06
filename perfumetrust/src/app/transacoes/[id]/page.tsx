@@ -51,27 +51,30 @@ export default async function TransacaoPage({ params }: Props) {
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div>
-        <h1 className="font-serif text-2xl font-light text-ink-50">Transação</h1>
-        <p className="text-sm text-ink-400">Registrada em {new Date(transaction.created_at).toLocaleDateString("pt-BR")}</p>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.02em] text-dourado">Transação</p>
+        <h1 className="font-serif text-3xl font-medium leading-none text-obsidian-900">Detalhes</h1>
+        <p className="mt-2 text-[13px] font-normal text-[#8A8F98]">
+          Registrada em {new Date(transaction.created_at).toLocaleDateString("pt-BR")}
+        </p>
       </div>
 
-      <div className="space-y-2 rounded-xl border border-ink-700 bg-ink-800/60 p-5">
+      <div className="rounded-card border border-sand-300 bg-white p-5">
         <Row label="Item">{transaction.item_description}</Row>
         <Row label="Valor">
           {transaction.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
         </Row>
         <Row label="Comprador">
-          <Link href={`/perfil/${buyer?.id}`} className="text-gold-300 hover:underline">
+          <Link href={`/perfil/${buyer?.id}`} className="border-b border-dourado-tint-border text-dourado-dark">
             {buyer?.full_name}
           </Link>
         </Row>
         <Row label="Vendedor">
-          <Link href={`/perfil/${seller?.id}`} className="text-gold-300 hover:underline">
+          <Link href={`/perfil/${seller?.id}`} className="border-b border-dourado-tint-border text-dourado-dark">
             {seller?.full_name}
           </Link>
         </Row>
-        <Row label="Status">
-          <span className="font-medium text-ink-50">{STATUS_LABELS[transaction.status]}</span>
+        <Row label="Status" last>
+          <span className="font-semibold text-obsidian-900">{STATUS_LABELS[transaction.status]}</span>
         </Row>
       </div>
 
@@ -84,11 +87,11 @@ export default async function TransacaoPage({ params }: Props) {
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children, last }: { label: string; children: React.ReactNode; last?: boolean }) {
   return (
-    <div className="flex justify-between gap-4 border-b border-ink-700 py-2 text-sm last:border-0">
-      <span className="text-ink-400">{label}</span>
-      <span className="text-right text-ink-100">{children}</span>
+    <div className={`flex justify-between gap-4 py-2.5 text-sm ${last ? "" : "border-b border-sand-200"}`}>
+      <span className="text-[#8A8F98]">{label}</span>
+      <span className="text-right text-obsidian-900">{children}</span>
     </div>
   );
 }

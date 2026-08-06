@@ -30,36 +30,19 @@ export function SearchBar({ compact = false }: { compact?: boolean }) {
     router.push(`/busca?${params.toString()}`);
   }
 
-  if (compact) {
-    return (
-      <form onSubmit={handleSubmit} className="relative w-full max-w-md">
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por membro..."
-          className="w-full border border-ink-600 bg-ink-900/70 py-2 pl-3.5 pr-9 text-sm text-ink-50 placeholder-ink-400 focus:border-gold-500 focus:outline-none"
-        />
-        <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 border border-ink-600 px-1.5 py-0.5 font-mono text-[10px] text-ink-500">
-          /
-        </span>
-      </form>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="flex w-full max-w-xl gap-2">
+    <form onSubmit={handleSubmit} className="flex w-full max-w-[620px] items-stretch gap-2">
       <input
+        ref={inputRef}
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar por membro (nome ou telefone)..."
-        className="flex-1 border border-ink-600 bg-ink-900/60 px-4 py-2 text-ink-50 placeholder-ink-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
+        placeholder={compact ? "Buscar por membro..." : "Buscar por nome ou telefone..."}
+        className="h-12 min-w-0 flex-1 rounded-lg border border-sand-400 bg-white px-4 font-sans text-[15px] font-normal text-obsidian-900 placeholder-[#A0A5AC] transition-[border-color,box-shadow] focus:border-dourado focus:outline-none focus:ring-[3px] focus:ring-dourado/[0.16]"
       />
       <button
         type="submit"
-        className="bg-gold-500 px-5 py-2 font-medium text-ink-950 transition hover:bg-gold-400"
+        className="h-12 shrink-0 rounded-lg bg-obsidian-900 px-[26px] font-sans text-xs font-semibold uppercase tracking-[0.02em] text-white transition-colors hover:bg-dourado hover:text-obsidian-900"
       >
         Buscar
       </button>

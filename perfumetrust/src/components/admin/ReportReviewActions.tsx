@@ -30,31 +30,40 @@ export function ReportReviewActions({ reportId }: { reportId: string }) {
   }
 
   return (
-    <div className="mt-3 space-y-2 border-t border-ink-700 pt-3">
-      {error && <p className="rounded bg-red-400/10 p-2 text-xs text-red-300">{error}</p>}
+    <div className="mt-4 space-y-3 border-t border-sand-200 pt-4">
+      {error && (
+        <p className="rounded-lg border border-crimson-tint-border bg-crimson-tint p-2 text-xs text-crimson">
+          {error}
+        </p>
+      )}
       <textarea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Notas internas (opcional)"
-        className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-xs text-ink-50 placeholder-ink-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
+        className="w-full rounded-lg border border-sand-400 bg-white p-2.5 text-[13px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
         rows={2}
       />
-      <label className="flex items-center gap-2 text-xs text-ink-300">
-        <input type="checkbox" checked={banUser} onChange={(e) => setBanUser(e.target.checked)} />
+      <label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-normal text-[#5B6470]">
+        <input
+          type="checkbox"
+          checked={banUser}
+          onChange={(e) => setBanUser(e.target.checked)}
+          className="h-[15px] w-[15px] accent-dourado"
+        />
         Banir usuário denunciado se procedente
       </label>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={() => handleReview(true)}
           disabled={loading}
-          className="rounded-lg bg-emerald-500/90 px-3 py-1.5 text-xs font-medium text-white transition disabled:opacity-50 hover:bg-emerald-500"
+          className="rounded-lg bg-verde px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:opacity-50 hover:bg-[#116430]"
         >
           Aprovar (procedente)
         </button>
         <button
           onClick={() => handleReview(false)}
           disabled={loading}
-          className="rounded-lg border border-ink-600 bg-ink-900/40 px-3 py-1.5 text-xs font-medium text-ink-200 transition disabled:opacity-50 hover:bg-ink-800"
+          className="rounded-lg border border-sand-400 bg-white px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.02em] text-[#3C434C] transition-colors disabled:opacity-50 hover:border-obsidian-900 hover:text-obsidian-900"
         >
           Rejeitar (improcedente)
         </button>

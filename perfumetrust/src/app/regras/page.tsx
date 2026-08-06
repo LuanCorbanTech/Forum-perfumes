@@ -1,5 +1,5 @@
 const RULES = [
-  "Registre a transação na plataforma assim que combinar a negociação — isso protege as duas partes.",
+  "Registre a transação na plataforma assim que combinar a negociação isso protege as duas partes.",
   "Só avalie depois que a transação estiver marcada como concluída (confirmação dupla).",
   "Não é permitido criar mais de uma conta para inflar a própria reputação.",
   "Denuncie golpes, produtos falsificados ou vendedores que sumirem após o pagamento.",
@@ -8,29 +8,29 @@ const RULES = [
 
 export default function RegrasPage() {
   return (
-    <div className="mx-auto max-w-2xl space-y-10">
+    <div className="mx-auto max-w-2xl space-y-9">
       <div>
-        <p className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.26em] text-gold-500">
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.02em] text-dourado">
           antes de negociar
         </p>
-        <h1 className="font-serif text-3xl font-light text-ink-50">Regras do fórum</h1>
+        <h1 className="font-serif text-[38px] font-medium leading-[1.04] text-obsidian-900">Regras do fórum</h1>
       </div>
 
-      <section>
-        <h2 className="mb-4 font-serif text-xl text-ink-50">Regras da comunidade</h2>
-        <ol className="space-y-3">
+      <section className="border-t border-sand-300 pt-8">
+        <h2 className="mb-4 text-[19px] font-bold leading-tight text-obsidian-900">Regras da comunidade</h2>
+        <ol className="space-y-3.5">
           {RULES.map((rule, i) => (
-            <li key={rule} className="grid grid-cols-[24px_1fr] items-start gap-3">
-              <span className="font-mono text-[11px] text-ink-500">{String(i + 1).padStart(2, "0")}</span>
-              <span className="text-[14.5px] leading-relaxed text-ink-300">{rule}</span>
+            <li key={rule} className="grid grid-cols-[26px_1fr] items-start gap-3">
+              <span className="text-[11px] font-semibold text-dourado">{String(i + 1).padStart(2, "0")}</span>
+              <span className="text-[14.5px] font-normal leading-relaxed text-[#3C434C]">{rule}</span>
             </li>
           ))}
         </ol>
       </section>
 
-      <p className="text-sm text-ink-400">
+      <p className="border-t border-sand-300 pt-6 text-sm font-normal text-[#8A8F98]">
         Viu alguém quebrando essas regras?{" "}
-        <a href="/busca" className="text-gold-300 hover:underline">
+        <a href="/busca" className="border-b border-dourado-tint-border text-dourado-dark">
           Encontre o perfil da pessoa
         </a>{" "}
         e use o botão de denúncia.

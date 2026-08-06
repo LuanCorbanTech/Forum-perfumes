@@ -49,27 +49,35 @@ export function ReportForm({ reportedId, reportedName, transactionId, currentUse
 
   if (success) {
     return (
-      <p className="rounded-lg bg-emerald-400/10 p-4 text-sm text-emerald-300">
+      <p className="rounded-card border border-verde-tint-border bg-verde-tint p-4 text-sm text-verde">
         Denúncia enviada. Nossa equipe irá analisar em breve.
       </p>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-ink-700 bg-ink-800/60 p-4">
-      <p className="font-medium text-ink-100">Denunciar {reportedName}</p>
+    <form onSubmit={handleSubmit} className="max-w-[560px] space-y-4 rounded-card border border-sand-300 bg-white p-[22px]">
+      <p className="text-[13px] font-normal text-[#5B6470]">
+        Denunciar <span className="font-semibold text-obsidian-900">{reportedName}</span>
+      </p>
 
-      {error && <p className="rounded bg-red-400/10 p-2 text-sm text-red-300">{error}</p>}
+      {error && (
+        <p className="rounded-lg border border-crimson-tint-border bg-crimson-tint p-3 text-[12.5px] text-crimson">
+          {error}
+        </p>
+      )}
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-ink-200">Motivo</label>
+        <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+          Motivo
+        </label>
         <select
           value={reason}
           onChange={(e) => setReason(e.target.value as ReportReason)}
-          className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-sm text-ink-50 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
+          className="h-11 w-full rounded-lg border border-sand-400 bg-white px-3 text-sm text-obsidian-900 focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
         >
           {Object.entries(REPORT_REASON_LABELS).map(([value, label]) => (
-            <option key={value} value={value} className="bg-ink-800 text-ink-50">
+            <option key={value} value={value} className="bg-white text-obsidian-900">
               {label}
             </option>
           ))}
@@ -77,12 +85,14 @@ export function ReportForm({ reportedId, reportedName, transactionId, currentUse
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-ink-200">Descrição</label>
+        <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+          Descrição
+        </label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Descreva o que aconteceu com o máximo de detalhes possível..."
-          className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-sm text-ink-50 placeholder-ink-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
+          placeholder="Descreva o que aconteceu, com datas e valores."
+          className="w-full rounded-lg border border-sand-400 bg-white p-3 text-sm text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
           rows={4}
         />
       </div>
@@ -90,7 +100,7 @@ export function ReportForm({ reportedId, reportedName, transactionId, currentUse
       <button
         type="submit"
         disabled={loading}
-        className="rounded-lg bg-red-500/90 px-4 py-2 font-medium text-white transition disabled:opacity-50 hover:bg-red-500"
+        className="rounded-lg bg-obsidian-900 px-[22px] py-[13px] text-[11.5px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:opacity-50 hover:bg-dourado hover:text-obsidian-900"
       >
         Enviar denúncia
       </button>

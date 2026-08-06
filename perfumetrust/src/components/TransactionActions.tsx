@@ -91,25 +91,29 @@ export function TransactionActions({ transaction, currentUserId, myReviewAlready
   }
 
   if (transaction.status === "cancelled") {
-    return <p className="text-sm text-ink-400">Esta transação foi cancelada.</p>;
+    return <p className="text-sm text-[#8A8F98]">Esta transação foi cancelada.</p>;
   }
 
   return (
     <div className="space-y-4">
-      {error && <p className="rounded bg-red-400/10 p-2 text-sm text-red-300">{error}</p>}
+      {error && (
+        <p className="rounded-lg border border-crimson-tint-border bg-crimson-tint p-2.5 text-sm text-crimson">
+          {error}
+        </p>
+      )}
 
       {transaction.status !== "completed" && (
-        <div className="rounded-lg border border-ink-700 bg-ink-800/60 p-4">
-          <p className="mb-3 text-sm text-ink-300">
+        <div className="rounded-card border border-sand-300 bg-white p-5">
+          <p className="mb-3.5 text-sm font-normal leading-relaxed text-[#5B6470]">
             {iConfirmed
               ? "Você já confirmou esta transação. Aguardando confirmação da outra parte."
               : "Confirme abaixo assim que receber o produto e/ou o pagamento combinado."}
-            {otherConfirmed && !iConfirmed && " A outra parte já confirmou — falta você."}
+            {otherConfirmed && !iConfirmed && " A outra parte já confirmou, falta você."}
           </p>
           <button
             onClick={handleConfirm}
             disabled={loading || iConfirmed}
-            className="rounded-lg bg-gold-500 px-4 py-2 font-medium text-ink-950 transition disabled:opacity-50 hover:bg-gold-400"
+            className="rounded-lg bg-obsidian-900 px-4 py-2.5 text-[12px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:opacity-50 hover:bg-dourado hover:text-obsidian-900"
           >
             {iConfirmed ? "Confirmado ✓" : "Confirmar transação"}
           </button>
@@ -117,15 +121,15 @@ export function TransactionActions({ transaction, currentUserId, myReviewAlready
       )}
 
       {transaction.status === "completed" && !myReviewAlreadyExists && (
-        <form onSubmit={handleReview} className="space-y-3 rounded-lg border border-ink-700 bg-ink-800/60 p-4">
-          <p className="font-medium text-ink-100">Avalie a outra parte</p>
+        <form onSubmit={handleReview} className="space-y-3.5 rounded-card border border-sand-300 bg-white p-5">
+          <p className="text-sm font-semibold text-obsidian-900">Avalie a outra parte</p>
           <div className="flex gap-1">
             {[1, 2, 3, 4, 5].map((n) => (
               <button
                 type="button"
                 key={n}
                 onClick={() => setRating(n)}
-                className={`text-2xl ${n <= rating ? "text-gold-400" : "text-ink-600"}`}
+                className={`text-2xl ${n <= rating ? "text-dourado" : "text-sand-400"}`}
                 aria-label={`${n} estrela${n > 1 ? "s" : ""}`}
               >
                 ★
@@ -136,28 +140,28 @@ export function TransactionActions({ transaction, currentUserId, myReviewAlready
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder="Comentário (opcional)"
-            className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-sm text-ink-50 placeholder-ink-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
+            className="w-full rounded-lg border border-sand-400 bg-white p-2.5 text-sm text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
             rows={3}
           />
           <div>
-            <label className="mb-1 block text-xs text-ink-400">
-              Foto do perfume recebido <span className="text-ink-500">(opcional)</span>
+            <label className="mb-1.5 block text-xs font-medium text-[#8A8F98]">
+              Foto do perfume recebido <span className="text-[#A0A5AC]">(opcional)</span>
             </label>
             <input
               type="file"
               accept="image/*"
               onChange={handlePhotoChange}
-              className="w-full rounded-lg border border-ink-600 bg-ink-900/60 p-2 text-xs text-ink-300 file:mr-3 file:rounded file:border-0 file:bg-gold-500 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-ink-950"
+              className="w-full rounded-lg border border-sand-400 bg-white p-2 text-xs text-[#5B6470] file:mr-3 file:rounded file:border-0 file:bg-dourado file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-obsidian-900"
             />
-            {photoError && <p className="mt-1 text-xs text-red-300">{photoError}</p>}
+            {photoError && <p className="mt-1 text-xs text-crimson">{photoError}</p>}
             {photo && !photoError && (
-              <p className="mt-1 text-xs text-ink-400">Selecionado: {photo.name}</p>
+              <p className="mt-1 text-xs text-[#8A8F98]">Selecionado: {photo.name}</p>
             )}
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="rounded-lg bg-gold-500 px-4 py-2 font-medium text-ink-950 transition disabled:opacity-50 hover:bg-gold-400"
+            className="rounded-lg bg-obsidian-900 px-4 py-2.5 text-[12px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:opacity-50 hover:bg-dourado hover:text-obsidian-900"
           >
             {loading ? "Enviando..." : "Enviar avaliação"}
           </button>
@@ -165,7 +169,9 @@ export function TransactionActions({ transaction, currentUserId, myReviewAlready
       )}
 
       {transaction.status === "completed" && myReviewAlreadyExists && (
-        <p className="text-sm text-emerald-300">Você já avaliou esta transação. Obrigado!</p>
+        <p className="rounded-lg border border-verde-tint-border bg-verde-tint p-3 text-sm text-verde">
+          Você já avaliou esta transação. Obrigado!
+        </p>
       )}
     </div>
   );

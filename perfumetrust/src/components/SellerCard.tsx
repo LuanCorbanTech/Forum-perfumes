@@ -1,5 +1,5 @@
+import Image from "next/image";
 import Link from "next/link";
-import { StarRating } from "./StarRating";
 import { formatDuration } from "@/lib/dateFormat";
 import { initials } from "@/lib/initials";
 import type { Profile } from "@/lib/types";
@@ -21,82 +21,94 @@ interface Props {
   recommenders?: Recommender[];
 }
 
-export function SellerCard({ profile, verified, testimonial, recommenders = [] }: Props) {
-  const extraRecommenders = Math.max(0, profile.recommendations_count - recommenders.length);
+export function SellerCard({ profile, verified, testimonial }: Props) {
+  const reviewsLabel =
+    profile.reviews_count === 1 ? "1 avaliação" : `${profile.reviews_count} avaliações`;
+  const starWidth = `${Math.min(100, Math.max(0, (profile.average_rating / 5) * 100))}%`;
 
   return (
-    <article className="flex flex-col border border-ink-700 bg-ink-800 transition hover:border-gold-500/40">
-      <div className="flex items-center gap-3.5 border-b border-ink-700 p-5 pb-4">
-        <span className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full border border-ink-600 bg-ink-700 font-serif text-lg text-gold-500">
-          {initials(profile.full_name)}
-        </span>
-        <span className="flex min-w-0 flex-col gap-1">
-          <span className="truncate font-serif text-xl text-ink-50">{profile.full_name}</span>
-          <span className="truncate font-mono text-[9.5px] tracking-wide text-ink-400">
-            {profile.city
-              ? `${profile.city}${profile.state ? `, ${profile.state}` : ""}`
-              : `membro há ${formatDuration(profile.created_at)}`}
-          </span>
-        </span>
-        {verified && (
-          <span className="ml-auto whitespace-nowrap border border-gold-500/50 bg-gold-500/10 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.12em] text-gold-300">
-            ✓ verificado
+    <article className="flex flex-col overflow-hidden rounded-card border border-sand-300 bg-white transition-[transform,border-color,box-shadow] duration-[250ms] ease-out hover:-translate-y-1 hover:border-dourado hover:shadow-[0_10px_26px_rgba(197,155,39,0.18)]">
+      {/* Cabeçalho escuro */}
+      <div className="flex items-start gap-3 bg-obsidian-900 px-[18px] py-4">
+        {profile.avatar_url ? (
+          <Image
+            src={profile.avatar_url}
+            alt={profile.full_name}
+            width={44}
+            height={44}
+            className="h-11 w-11 shrink-0 rounded-lg border border-obsidian-400 object-cover"
+          />
+        ) : (
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-obsidian-400 bg-obsidian-700 text-sm font-semibold text-white">
+            {initials(profile.full_name)}
           </span>
         )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-px bg-ink-700">
-        <Stat label="Tempo no grupo" value={formatDuration(profile.created_at)} />
-        <div className="bg-ink-800 px-5 py-4">
-          <span className="mb-2 block font-mono text-[9px] uppercase tracking-[0.16em] text-ink-400">
-            Avaliação
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-base font-semibold leading-[1.25] text-white">
+            {profile.full_name}
           </span>
-          <span className="flex items-baseline gap-2">
-            <span className="font-serif text-2xl leading-none text-gold-300">
-              {profile.average_rating.toFixed(1).replace(".", ",")}
+          <span className="mt-1.5 flex flex-wrap items-center gap-2">
+            {verified && (
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-verde-dark-border bg-verde-dark py-[3px] pl-1 pr-2.5 text-[10.5px] font-semibold text-verde-light">
+                <span className="grid h-3.5 w-3.5 place-items-center rounded-full bg-verde text-[8px] font-bold leading-none text-white">
+                  ✓
+                </span>
+                verificado
+              </span>
+            )}
+            <span className="text-[11.5px] font-normal text-[#9AA1A9]">
+              {profile.city
+                ? `${profile.city}${profile.state ? `, ${profile.state}` : ""}`
+                : `membro há ${formatDuration(profile.created_at)}`}
             </span>
-            <StarRating rating={profile.average_rating} size="sm" showNumber={false} />
           </span>
-        </div>
-        <Stat label="Perfumes vendidos" value={String(profile.completed_sales_count)} />
-        <Stat label="Perfumes comprados" value={String(profile.completed_purchases_count)} />
+        </span>
       </div>
 
-      <div className="flex-1 border-t border-ink-700 p-5">
-        <p className="mb-3 font-mono text-[9px] uppercase tracking-[0.16em] text-ink-400">
-          Indicações · {profile.recommendations_count}
-        </p>
+      {/* Bloco da nota */}
+      <div className="flex items-end gap-3 border-b border-sand-200 px-[18px] py-4">
+        <span className="font-serif text-[44px] font-semibold leading-[0.82] text-obsidian-900">
+          {profile.average_rating.toFixed(1).replace(".", ",")}
+        </span>
+        <span className="pb-[3px]">
+          <span className="relative inline-block w-max text-[13px] leading-none tracking-[0.02em]">
+            <span className="text-[#E2DCD1]">★★★★★</span>
+            <span
+              className="absolute left-0 top-0 overflow-hidden whitespace-nowrap text-dourado"
+              style={{ width: starWidth }}
+            >
+              ★★★★★
+            </span>
+          </span>
+          <span className="mt-1.5 block text-[11px] font-normal text-[#8A8F98]">{reviewsLabel}</span>
+        </span>
+      </div>
+
+      {/* Faixa de três métricas */}
+      <div className="grid grid-cols-3 divide-x divide-sand-200 border-b border-sand-200">
+        <Stat label="vendas" value={profile.completed_sales_count} />
+        <Stat label="compras" value={profile.completed_purchases_count} />
+        <Stat label="indicações" value={profile.recommendations_count} />
+      </div>
+
+      {/* Depoimento */}
+      <div className="flex-1 px-[18px] py-4">
         {testimonial ? (
           <>
-            <p className="text-[13.5px] leading-relaxed text-ink-300">“{testimonial.comment}”</p>
-            <p className="mt-2.5 font-mono text-[9.5px] tracking-wide text-ink-500">
-              — {testimonial.reviewerName}
-            </p>
+            <p className="text-[13px] font-normal leading-[1.6] text-[#374151]">“{testimonial.comment}”</p>
+            <p className="mt-2 text-[11px] font-normal text-[#8A8F98]">{testimonial.reviewerName}</p>
           </>
         ) : (
-          <p className="text-[13.5px] leading-relaxed text-ink-500">Ainda não tem avaliações públicas.</p>
-        )}
-        {recommenders.length > 0 && (
-          <div className="mt-4 flex items-center gap-1.5">
-            {recommenders.map((r) => (
-              <span
-                key={r.id}
-                title={r.full_name}
-                className="grid h-6 w-6 place-items-center rounded-full border border-ink-600 bg-ink-700 font-mono text-[8.5px] text-ink-300"
-              >
-                {initials(r.full_name)}
-              </span>
-            ))}
-            {extraRecommenders > 0 && (
-              <span className="font-mono text-[10px] text-ink-500">+{extraRecommenders}</span>
-            )}
-          </div>
+          <p className="text-[13px] font-normal leading-[1.6] text-[#8A8F98]">
+            Ainda não tem avaliações públicas.
+          </p>
         )}
       </div>
 
+      {/* Rodapé */}
       <Link
         href={`/perfil/${profile.id}`}
-        className="border-t border-ink-700 p-3.5 text-center font-mono text-[11.5px] uppercase tracking-[0.1em] text-ink-200 transition hover:bg-ink-700 hover:text-gold-300"
+        className="border-t border-sand-200 p-3.5 text-center text-[11px] font-semibold uppercase tracking-[0.02em] text-obsidian-900 transition-colors hover:bg-sand hover:text-dourado"
       >
         Ver perfil completo
       </Link>
@@ -104,13 +116,13 @@ export function SellerCard({ profile, verified, testimonial, recommenders = [] }
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="bg-ink-800 px-5 py-4">
-      <span className="mb-2 block font-mono text-[9px] uppercase tracking-[0.16em] text-ink-400">
+    <div className="px-[18px] py-3">
+      <span className="block text-[19px] font-semibold leading-none text-obsidian-900">{value}</span>
+      <span className="mt-1 block text-[9.5px] font-medium uppercase tracking-[0.02em] text-[#8A8F98]">
         {label}
       </span>
-      <span className="block font-serif text-2xl leading-none text-ink-50">{value}</span>
     </div>
   );
 }
