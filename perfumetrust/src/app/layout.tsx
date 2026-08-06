@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Montserrat } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
-import { TopBanner } from "@/components/TopBanner";
 import { Footer } from "@/components/Footer";
 
 // Redesign "handoff" (design_handoff_cheiro_novo): Cormorant Garamond no
@@ -16,10 +15,6 @@ const displayFont = Cormorant_Garamond({
   variable: "--font-display",
   weight: ["400", "500", "600", "700"],
   style: ["normal", "italic"],
-  // "swap" garante que o navegador troque para a fonte real assim que ela
-  // carregar, em vez de desistir e travar na fonte do sistema quando a
-  // rede está lenta ou em modos que priorizam desempenho/economizam dados
-  // (era isso que fazia os textos menores parecerem "fonte do computador").
   display: "swap",
 });
 
@@ -38,9 +33,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${displayFont.variable} ${bodyFont.variable}`}>
-      <body className="min-h-screen bg-sand font-sans font-normal text-navy-600 antialiased">
-        <TopBanner />
+    <html
+      lang="pt-BR"
+      className={`w-full max-w-full overflow-x-hidden ${displayFont.variable} ${bodyFont.variable}`}
+    >
+      <body className="w-full max-w-full min-h-screen overflow-x-hidden bg-sand font-sans font-normal text-navy-600 antialiased">
         <Navbar />
         <main className="mx-auto max-w-6xl px-4 py-10 sm:px-7">{children}</main>
         <Footer />

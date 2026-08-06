@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { SellerCard } from "@/components/SellerCard";
 import { Avatar } from "@/components/Avatar";
 import { SearchBar } from "@/components/SearchBar";
@@ -146,6 +147,24 @@ export default async function HomePage({ searchParams }: Props) {
           </div>
         </div>
       </section>
+
+      {/* ================= BANNER DO CANAL ================= */}
+      <div className="mx-auto max-w-[1200px] px-4 sm:px-7">
+        <a
+          href="https://www.youtube.com/@canalcheironovo"
+          target="_blank"
+          rel="noreferrer"
+          className="my-14 block overflow-hidden rounded-2xl border border-dourado/20 bg-obsidian-900"
+        >
+          <Image
+            src="/banner-topo.png"
+            alt="Canal Cheiro Novo — vídeos novos de seg a sáb às 20h15, shorts todos os dias às 19h, @canalcheironovo"
+            width={1138}
+            height={188}
+            className="block h-auto w-full"
+          />
+        </a>
+      </div>
 
       {/* ================= GRID DE MEMBROS ================= */}
       <div className="mx-auto max-w-6xl px-4 py-11 sm:px-7">
