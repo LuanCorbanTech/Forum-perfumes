@@ -1,10 +1,12 @@
 -- =====================================================================
--- Cheiro Novo — Migração 006: CPF, e-mail de contato e "já participa
+-- Cheiro Novo — Migração 006: CPF, telefone (WhatsApp) e "já participa
 -- do grupo de WhatsApp"
 -- =====================================================================
--- Adiciona campos ao cadastro: CPF, e-mail de contato (para quem se
--- cadastra por telefone, que antes não tinha e-mail nenhum salvo) e se
--- a pessoa já participa do grupo de WhatsApp de desapego.
+-- Adiciona campos ao cadastro: CPF, telefone/WhatsApp de contato (a tela
+-- de cadastro não usa mais telefone como método de verificação — a
+-- verificação no cadastro é sempre por e-mail, então o telefone digitado
+-- vem por metadata, não por new.phone) e se a pessoa já participa do
+-- grupo de WhatsApp de desapego.
 --
 -- IMPORTANTE — por que isso NÃO entra na tabela "profiles": a policy
 -- "profiles_select_public" (rls_policies.sql) permite que QUALQUER
@@ -81,10 +83,14 @@ create policy "profile_kyc_update_own"
 -- 2) Atualiza o trigger de criação automática de profile para também
 --    gravar CPF e participação no grupo, vindos de options.data no
 --    signInWithOtp (mesma mecânica que já existe para full_name), e
---    para gravar o e-mail de contato mesmo em cadastros feitos por
---    telefone (nesse caso "new.email" vem nulo do auth.users — o
---    e-mail de contato digitado no formulário chega só em
---    raw_user_meta_data->>'email').
+--    para gravar telefone/e-mail mesmo quando eles não vêm de
+--    new.phone/new.email diretamente:
+--      - Cadastro por e-mail (fluxo atual da tela de Cadastro): a
+--        verificação é por e-mail, então "new.phone" vem nulo — o
+--        telefone/WhatsApp digitado chega só por
+--        raw_user_meta_data->>'phone'.
+--      - Login por telefone (tela de Entrar, fluxo antigo): "new.email"
+--        pode vir nulo — coberto pelo mesmo coalesce, sem quebrar nada.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -97,7 +103,7 @@ begin
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'full_name', split_part(coalesce(new.email, new.phone, 'Usuário'), '@', 1)),
-    new.phone,
+    coalesce(new.phone, new.raw_user_meta_data->>'phone'),
     coalesce(new.email, new.raw_user_meta_data->>'email')
   )
   on conflict (id) do nothing;

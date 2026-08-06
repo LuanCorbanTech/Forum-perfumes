@@ -26,19 +26,21 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
 
   // Campos extras, só usados na tela de cadastro (ver isCadastro abaixo).
-  // Guardados separados de "profiles" — vão para a tabela protegida
-  // "profile_kyc" (migration_006), não para a leitura pública de perfis.
+  // CPF e participação no grupo vão para a tabela protegida "profile_kyc"
+  // (migration_006), não para a leitura pública de "profiles".
   const [cpf, setCpf] = useState("");
   const [inWhatsappGroup, setInWhatsappGroup] = useState<"" | "sim" | "nao">("");
-  // E-mail de contato pedido no cadastro por telefone (quando o método de
-  // verificação é "phone", o campo "email" acima não é preenchido — este
-  // é um campo à parte só para guardar o e-mail de contato da pessoa).
-  const [contactEmail, setContactEmail] = useState("");
 
   // O cadastro usa exatamente o mesmo fluxo de OTP do login (no primeiro
   // acesso o trigger `handle_new_user` já cria o profile) — só o texto muda
   // conforme a pessoa chegou por "Entrar" ou por "Cadastrar" no header.
   const isCadastro = searchParams.get("modo") === "cadastro";
+
+  // No cadastro não existe mais a escolha telefone/e-mail: o campo "Telefone
+  // (WhatsApp)" é só um dado de contato, e a verificação sempre acontece por
+  // e-mail. No login ("Entrar"), continua igual: a pessoa escolhe telefone
+  // ou e-mail (variável "method" acima).
+  const verifyMethod: Method = isCadastro ? "email" : method;
 
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
@@ -53,7 +55,11 @@ export function LoginForm() {
         setError('Selecione se você já participa do grupo de WhatsApp.');
         return;
       }
-      if (method === "phone" && !isValidEmail(contactEmail)) {
+      if (!phone.trim()) {
+        setError("Digite seu telefone (WhatsApp).");
+        return;
+      }
+      if (!isValidEmail(email)) {
         setError("Digite um e-mail válido.");
         return;
       }
@@ -65,15 +71,15 @@ export function LoginForm() {
       ? {
           cpf: cpf.replace(/\D/g, ""),
           in_whatsapp_group: inWhatsappGroup === "sim",
-          // Quando o método é telefone, "email" (abaixo) fica vazio — o
-          // e-mail de contato pedido no cadastro vem daqui.
-          ...(method === "phone" ? { email: contactEmail.trim() } : {}),
+          // No cadastro a verificação é sempre por e-mail — o telefone
+          // (WhatsApp) é só um dado de contato, guardado via metadata.
+          phone: normalizePhone(phone),
         }
       : {};
 
     const next = searchParams.get("next") ?? "/";
     const options =
-      method === "phone"
+      verifyMethod === "phone"
         ? { data: { full_name: fullName || undefined, ...cadastroData } }
         : {
             data: { full_name: fullName || undefined, ...cadastroData },
@@ -83,7 +89,7 @@ export function LoginForm() {
             emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
           };
     const { error } =
-      method === "phone"
+      verifyMethod === "phone"
         ? await supabase.auth.signInWithOtp({ phone: normalizePhone(phone), options })
         : await supabase.auth.signInWithOtp({ email, options });
 
@@ -101,7 +107,7 @@ export function LoginForm() {
     setLoading(true);
 
     const { error } =
-      method === "phone"
+      verifyMethod === "phone"
         ? await supabase.auth.verifyOtp({ phone: normalizePhone(phone), token: code, type: "sms" })
         : await supabase.auth.verifyOtp({ email, token: code, type: "email" });
 
@@ -124,7 +130,9 @@ export function LoginForm() {
         {isCadastro ? "Criar conta no Cheiro Novo" : "Entrar no Cheiro Novo"}
       </h1>
       <p className="mb-2 text-center text-sm font-normal text-[#5B6470]">
-        Use seu telefone ou e-mail. Enviaremos um código de confirmação.
+        {isCadastro
+          ? "Enviaremos um código de confirmação para o seu e-mail."
+          : "Use seu telefone ou e-mail. Enviaremos um código de confirmação."}
       </p>
       <p className="mb-7 text-center text-[12.5px] font-normal text-[#8A8F98]">
         {isCadastro ? (
@@ -147,26 +155,28 @@ export function LoginForm() {
       <div className="rounded-card border border-sand-300 bg-white p-[26px]">
         {step === "identify" && (
           <>
-            <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg border border-sand-300 p-1">
-              <button
-                type="button"
-                onClick={() => setMethod("phone")}
-                className={`rounded-md py-[9px] text-[13px] font-medium transition-colors ${
-                  method === "phone" ? "bg-obsidian-900 text-white" : "text-[#5B6470]"
-                }`}
-              >
-                Telefone
-              </button>
-              <button
-                type="button"
-                onClick={() => setMethod("email")}
-                className={`rounded-md py-[9px] text-[13px] font-medium transition-colors ${
-                  method === "email" ? "bg-obsidian-900 text-white" : "text-[#5B6470]"
-                }`}
-              >
-                E-mail
-              </button>
-            </div>
+            {!isCadastro && (
+              <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg border border-sand-300 p-1">
+                <button
+                  type="button"
+                  onClick={() => setMethod("phone")}
+                  className={`rounded-md py-[9px] text-[13px] font-medium transition-colors ${
+                    method === "phone" ? "bg-obsidian-900 text-white" : "text-[#5B6470]"
+                  }`}
+                >
+                  Telefone
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMethod("email")}
+                  className={`rounded-md py-[9px] text-[13px] font-medium transition-colors ${
+                    method === "email" ? "bg-obsidian-900 text-white" : "text-[#5B6470]"
+                  }`}
+                >
+                  E-mail
+                </button>
+              </div>
+            )}
 
             <form onSubmit={handleSendCode} className="space-y-4">
               <div>
@@ -182,7 +192,69 @@ export function LoginForm() {
                 />
               </div>
 
-              {method === "phone" ? (
+              {isCadastro ? (
+                <>
+                  <div>
+                    <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                      CPF
+                    </label>
+                    <input
+                      value={cpf}
+                      onChange={(e) => setCpf(formatCPF(e.target.value))}
+                      placeholder="000.000.000-00"
+                      inputMode="numeric"
+                      maxLength={14}
+                      required
+                      className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                      Telefone (WhatsApp)
+                    </label>
+                    <input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+55 11 99999-8888"
+                      required
+                      className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                      E-mail
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="voce@email.com"
+                      required
+                      className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                      Já participa do grupo de WhatsApp?
+                    </label>
+                    <select
+                      value={inWhatsappGroup}
+                      onChange={(e) => setInWhatsappGroup(e.target.value as "" | "sim" | "nao")}
+                      required
+                      className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+                    >
+                      <option value="" disabled>
+                        Selecione uma opção
+                      </option>
+                      <option value="sim">Sim, já participo</option>
+                      <option value="nao">Não, ainda não</option>
+                    </select>
+                  </div>
+                </>
+              ) : method === "phone" ? (
                 <div>
                   <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
                     Telefone (com DDD)
@@ -209,59 +281,6 @@ export function LoginForm() {
                     className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
                   />
                 </div>
-              )}
-
-              {isCadastro && method === "phone" && (
-                <div>
-                  <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
-                    E-mail
-                  </label>
-                  <input
-                    type="email"
-                    value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
-                    placeholder="voce@email.com"
-                    required
-                    className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
-                  />
-                </div>
-              )}
-
-              {isCadastro && (
-                <>
-                  <div>
-                    <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
-                      CPF
-                    </label>
-                    <input
-                      value={cpf}
-                      onChange={(e) => setCpf(formatCPF(e.target.value))}
-                      placeholder="000.000.000-00"
-                      inputMode="numeric"
-                      maxLength={14}
-                      required
-                      className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
-                      Já participa do grupo de WhatsApp?
-                    </label>
-                    <select
-                      value={inWhatsappGroup}
-                      onChange={(e) => setInWhatsappGroup(e.target.value as "" | "sim" | "nao")}
-                      required
-                      className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
-                    >
-                      <option value="" disabled>
-                        Selecione uma opção
-                      </option>
-                      <option value="sim">Sim, já participo</option>
-                      <option value="nao">Não, ainda não</option>
-                    </select>
-                  </div>
-                </>
               )}
 
               {error && (
@@ -306,10 +325,10 @@ export function LoginForm() {
         {step === "verify" && (
           <form onSubmit={handleVerifyCode} className="space-y-3.5">
             <p className="text-sm font-normal leading-relaxed text-[#3C434C]">
-              Enviamos {method === "phone" ? "um código" : "um e-mail de confirmação"} para{" "}
-              {method === "phone" ? normalizePhone(phone) : email}.
+              Enviamos {verifyMethod === "phone" ? "um código" : "um e-mail de confirmação"} para{" "}
+              {verifyMethod === "phone" ? normalizePhone(phone) : email}.
             </p>
-            {method === "email" && (
+            {verifyMethod === "email" && (
               <p className="rounded-lg border border-dourado-tint-border bg-dourado-tint p-3 text-[12.5px] font-normal leading-relaxed text-[#5B6470]">
                 Mais fácil: abra o e-mail e clique no link &ldquo;Entrar&rdquo;, isso já faz login
                 direto, sem precisar digitar nada aqui. O campo abaixo só funciona se o código
