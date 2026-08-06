@@ -113,12 +113,20 @@ export async function Navbar() {
               </button>
             </form>
           ) : (
-            <Link
-              href="/login"
-              className="rounded-md bg-dourado px-4 py-[9px] text-[11px] font-semibold uppercase tracking-[0.02em] text-obsidian-900 transition-colors hover:bg-dourado-hover"
-            >
-              Entrar
-            </Link>
+            <div className="flex shrink-0 items-center gap-2.5">
+              <Link
+                href="/login?modo=cadastro"
+                className="hidden rounded-md border border-dourado/40 px-4 py-[9px] text-[11px] font-semibold uppercase tracking-[0.02em] text-dourado transition-colors hover:border-dourado hover:bg-dourado/10 min-[560px]:inline-block"
+              >
+                Cadastrar
+              </Link>
+              <Link
+                href="/login"
+                className="rounded-md bg-dourado px-4 py-[9px] text-[11px] font-semibold uppercase tracking-[0.02em] text-obsidian-900 transition-colors hover:bg-dourado-hover"
+              >
+                Entrar
+              </Link>
+            </div>
           )}
         </nav>
       </div>
