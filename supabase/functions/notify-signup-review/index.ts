@@ -7,11 +7,19 @@
 // qualquer motivo, a aprovação/recusa em si já aconteceu normalmente,
 // ninguém fica travado por causa disso.
 //
-// Variáveis de ambiente necessárias (configure com `supabase secrets set`,
-// ver README.md nesta mesma pasta para o passo a passo completo):
-//   BREVO_API_KEY      -> chave de API gerada em brevo.com (Settings > SMTP & API > API Keys)
-//   BREVO_SENDER_EMAIL -> e-mail remetente, precisa estar verificado na Brevo
-//   BREVO_SENDER_NAME  -> nome exibido como remetente (opcional, padrão "Cheiro Novo")
+// A chave da Brevo e o remetente NÃO ficam mais em variável de ambiente:
+// desde a migration_008, o admin configura os três valores abaixo direto
+// pela tela /admin/configuracoes (aba "APIs") do site, e ficam guardados
+// na tabela admin_settings (só admin lê/escreve lá, via RLS). Esta função
+// lê o valor mais recente a cada chamada, então trocar a chave pela tela
+// já vale na hora, sem precisar reimplantar (redeploy) nada:
+//   brevo_api_key
+//   brevo_sender_email
+//   brevo_sender_name
+//
+// Como fallback (só pra quem preferir configurar por variável de
+// ambiente em vez da tela), se uma dessas chaves não estiver na tabela,
+// a função tenta o `Deno.env.get` de mesmo nome em maiúsculas.
 //
 // SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY já vêm prontos automaticamente
 // no ambiente de Edge Functions do Supabase, não precisa configurar.
@@ -33,24 +41,34 @@ Deno.serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const brevoApiKey = Deno.env.get("BREVO_API_KEY");
-    const senderEmail = Deno.env.get("BREVO_SENDER_EMAIL");
-    const senderName = Deno.env.get("BREVO_SENDER_NAME") ?? "Cheiro Novo";
 
     if (!supabaseUrl || !serviceRoleKey) {
       return new Response(JSON.stringify({ error: "Configuração do Supabase ausente." }), { status: 500 });
     }
 
+    const admin = createClient(supabaseUrl, serviceRoleKey);
+
+    // Lê a chave/remetente configurados em /admin/configuracoes (tabela
+    // admin_settings, migration_008) — com fallback pra variável de
+    // ambiente pra quem preferir configurar assim.
+    const { data: settingsRows } = await admin
+      .from("admin_settings")
+      .select("key, value")
+      .in("key", ["brevo_api_key", "brevo_sender_email", "brevo_sender_name"]);
+    const settings = new Map((settingsRows ?? []).map((r: { key: string; value: string | null }) => [r.key, r.value]));
+
+    const brevoApiKey = settings.get("brevo_api_key") || Deno.env.get("BREVO_API_KEY");
+    const senderEmail = settings.get("brevo_sender_email") || Deno.env.get("BREVO_SENDER_EMAIL");
+    const senderName = settings.get("brevo_sender_name") || Deno.env.get("BREVO_SENDER_NAME") || "Cheiro Novo";
+
     if (!brevoApiKey || !senderEmail) {
-      // Ainda não configurou a Brevo (ver README.md) — não trava a
-      // aprovação/recusa por causa disso, só avisa que o e-mail não saiu.
+      // Ainda não configurou a Brevo em /admin/configuracoes — não trava
+      // a aprovação/recusa por causa disso, só avisa que o e-mail não saiu.
       return new Response(
-        JSON.stringify({ skipped: true, reason: "BREVO_API_KEY ou BREVO_SENDER_EMAIL não configurados." }),
+        JSON.stringify({ skipped: true, reason: "Chave da Brevo ou e-mail remetente não configurados em /admin/configuracoes." }),
         { status: 200, headers: { "content-type": "application/json" } }
       );
     }
-
-    const admin = createClient(supabaseUrl, serviceRoleKey);
 
     const { data: profile, error: profileError } = await admin
       .from("profiles")

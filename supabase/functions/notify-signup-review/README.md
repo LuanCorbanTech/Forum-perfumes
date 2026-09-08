@@ -1,67 +1,66 @@
 # Aviso por e-mail de aprovação/recusa de cadastro (Brevo)
 
-Diferente das migrações `.sql` (que você só cola no SQL Editor do Supabase),
-esta função precisa ser publicada via linha de comando, uma única vez.
-Sem esse passo a passo, a aprovação/recusa de cadastro continua funcionando
-normalmente, ela só não vai mandar o e-mail.
+A chave da Brevo e o e-mail remetente **não ficam mais em variável de
+ambiente/linha de comando** — desde a migração 008, você configura os
+dois direto pelo site, na aba **Configurações (APIs)** dentro do painel
+`/admin`. Publicar (fazer o deploy d)esta função continua sendo um passo
+único, feito uma vez só — e dá pra fazer sem instalar nada, direto pelo
+site do Supabase.
 
-## 1) Crie sua conta na Brevo e pegue a chave de API
+## 1) Rode a migração 008
 
-1. Crie a conta em https://www.brevo.com (o plano grátis cobre até 300
-   e-mails/dia, mais do que suficiente aqui).
-2. Verifique um remetente: em **Settings > Senders & IP > Senders**,
-   adicione e confirme o e-mail que vai aparecer como remetente (ex.:
-   `contato@cheironovo.com.br` ou o e-mail que você já usa no site).
-3. Pegue a chave de API em **Settings > SMTP & API > API Keys > Generate
-   a new API key**.
+Antes de tudo, cole `supabase/migration_008_configuracoes_admin.sql` no
+SQL Editor do Supabase e rode (se ainda não rodou). É ela que cria a
+tabela onde a chave da Brevo fica guardada com segurança (só admin lê).
 
-## 2) Instale e conecte a CLI do Supabase (só na primeira vez)
+## 2) Publique esta função (só precisa fazer uma vez)
+
+### Opção A — pelo próprio site do Supabase, sem instalar nada
+
+1. Entre no painel do seu projeto em supabase.com e abra **Edge
+   Functions** no menu lateral.
+2. Clique em **Deploy a new function > Via Editor**.
+3. Apague o conteúdo de exemplo e cole todo o conteúdo do arquivo
+   `index.ts` desta mesma pasta.
+4. Dê o nome **notify-signup-review** pra função (tem que ser esse nome
+   exato) e clique em **Deploy function**.
+
+### Opção B — pela linha de comando (CLI), se preferir
 
 ```bash
 npm install -g supabase
 supabase login
-```
-
-Isso abre o navegador para você autorizar a CLI na sua conta Supabase.
-
-## 3) Conecte a CLI ao SEU projeto
-
-Na raiz do projeto (pasta `perfumetrust`), rode:
-
-```bash
 supabase link --project-ref SEU_PROJECT_REF
-```
-
-`SEU_PROJECT_REF` é o identificador do projeto, você encontra na URL do
-painel do Supabase (`https://supabase.com/dashboard/project/SEU_PROJECT_REF`)
-ou em **Project Settings > General**.
-
-## 4) Configure os segredos (a chave da Brevo nunca fica no código)
-
-```bash
-supabase secrets set BREVO_API_KEY=cole_sua_chave_aqui
-supabase secrets set BREVO_SENDER_EMAIL=o_email_verificado@seudominio.com
-supabase secrets set BREVO_SENDER_NAME="Cheiro Novo"
-```
-
-## 5) Publique a função
-
-```bash
 supabase functions deploy notify-signup-review
 ```
 
-Pronto. A partir daqui, toda vez que você aprovar ou recusar um cadastro em
-`/admin/cadastros`, a pessoa recebe um e-mail automático avisando (e, se for
-recusa, com o motivo que você escreveu no campo de notas).
+`SEU_PROJECT_REF` é o identificador do projeto, você encontra na URL do
+painel (`https://supabase.com/dashboard/project/SEU_PROJECT_REF`) ou em
+**Project Settings > General**.
+
+## 3) Configure a Brevo pelo próprio site
+
+Depois de publicada a função (passo 2), entre no seu site, vá em
+**Admin > Configurações (APIs)** e preencha:
+
+- **Chave de API da Brevo** — gerada em brevo.com, em Configurações >
+  SMTP e API > Chaves de API.
+- **E-mail remetente** — o e-mail que você verificou na Brevo (em
+  Configurações > Remetentes e IP > Remetentes).
+- **Nome do remetente** — o que aparece pra quem recebe o e-mail (ex.:
+  "Cheiro Novo").
+
+Pronto. A partir daqui, toda vez que você aprovar ou recusar um cadastro
+em `/admin/cadastros`, a pessoa recebe um e-mail automático avisando (e,
+se for recusa, com o motivo que você escreveu no campo de notas). Se um
+dia quiser trocar a chave, é só voltar nessa mesma tela, não precisa
+mexer na função de novo.
 
 ## Se algo der errado
 
-Isso é só um aviso de "melhor esforço": se a Brevo estiver mal configurada,
-ou você ainda não tiver rodado os passos acima, a aprovação/recusa em si
-continua acontecendo normalmente — a pessoa só não recebe o e-mail. Você
-pode ver o motivo do erro (chave inválida, remetente não verificado, etc)
-rodando:
-
-```bash
-supabase functions logs notify-signup-review
-```
+Isso é só um aviso de "melhor esforço": se a Brevo estiver mal
+configurada, a aprovação/recusa em si continua acontecendo normalmente,
+a pessoa só não recebe o e-mail (e você vê um aviso discreto na tela).
+Pra investigar o motivo exato do erro (chave inválida, remetente não
+verificado, etc), veja os logs da função em **Edge Functions >
+notify-signup-review > Logs** no painel do Supabase.

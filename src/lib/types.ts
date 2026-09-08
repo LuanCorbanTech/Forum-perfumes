@@ -14,6 +14,22 @@ export type ReportStatus = "pending" | "under_review" | "approved" | "rejected";
 
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 
+// Guarda credenciais de integrações (migration_008) — só admin enxerga
+// essa tabela (RLS). Usada hoje pela aba /admin/configuracoes pra
+// configurar o envio de e-mail (Brevo) sem precisar de linha de comando.
+export interface AdminSetting {
+  key: string;
+  value: string | null;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+export const ADMIN_SETTING_KEYS = {
+  BREVO_API_KEY: "brevo_api_key",
+  BREVO_SENDER_EMAIL: "brevo_sender_email",
+  BREVO_SENDER_NAME: "brevo_sender_name",
+} as const;
+
 export type ReportReason =
   | "golpe"
   | "produto_nao_enviado"
