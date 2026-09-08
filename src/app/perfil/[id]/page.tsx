@@ -135,7 +135,7 @@ export default async function PerfilPage({ params }: Props) {
 
           {!isOwnProfile && user && (
             <div className="flex min-w-[190px] flex-col gap-2">
-              <a
+              
                 href={`/transacoes/nova?vendedor=${profile.id}`}
                 className="rounded-lg bg-obsidian-900 px-[18px] py-3 text-center text-[11.5px] font-semibold uppercase tracking-[0.02em] text-white transition-colors hover:bg-dourado hover:text-obsidian-900"
               >
@@ -247,32 +247,4 @@ export default async function PerfilPage({ params }: Props) {
           </span>
           <span className="relative inline-block w-max text-[19px] leading-none tracking-[0.02em]" aria-hidden="true">
             <span className="text-obsidian-500">★★★★★</span>
-            <span className="absolute left-0 top-0 overflow-hidden whitespace-nowrap text-dourado" style={{ width: `${starPct}%` }}>
-              ★★★★★
-            </span>
-          </span>
-        </div>
-
-        <h2 className="mb-1.5 mt-11 text-xl font-bold text-obsidian-900">
-          Histórico de transações e avaliações
-        </h2>
-        <p className="mb-6 text-[13px] font-normal text-[#8A8F98]">
-          Só transações confirmadas pelas duas partes aparecem aqui.
-        </p>
-        <ReviewList reviews={reviews ?? []} />
-
-        {!isOwnProfile && user && (
-          <>
-            <h2 className="mb-4 mt-11 text-xl font-bold text-obsidian-900">Algo errado?</h2>
-            <ReportForm
-              reportedId={profile.id}
-              reportedName={profile.full_name}
-              currentUserId={user.id}
-              myApprovalStatus={myApprovalStatus}
-            />
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
+            <span
