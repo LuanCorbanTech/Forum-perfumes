@@ -82,6 +82,33 @@ create table if not exists public.profiles (
 
 comment on table public.profiles is 'Perfil público de compradores/vendedores do PerfumeTrust.';
 
+-- Se "profiles" já existia (criada antes de alguma dessas colunas serem
+-- adicionadas ao schema), o "create table if not exists" acima é um
+-- no-op e NÃO adiciona as colunas que faltam — daí o erro clássico
+-- "column ... does not exist" mais abaixo, no create index. Este bloco
+-- garante que toda coluna exista de qualquer forma, mesmo numa tabela
+-- bem mais antiga que este arquivo.
+alter table public.profiles
+  add column if not exists avatar_url               text,
+  add column if not exists bio                      text,
+  add column if not exists city                     text,
+  add column if not exists state                     text,
+  add column if not exists brands                    text[] not null default '{}',
+  add column if not exists item_types                text[] not null default '{}',
+  add column if not exists average_rating            numeric(3,2) not null default 0,
+  add column if not exists reviews_count             integer not null default 0,
+  add column if not exists completed_sales_count     integer not null default 0,
+  add column if not exists completed_purchases_count integer not null default 0,
+  add column if not exists recommendations_count      integer not null default 0,
+  add column if not exists trust_score                integer not null default 50,
+  add column if not exists is_admin                   boolean not null default false,
+  add column if not exists is_banned                  boolean not null default false,
+  add column if not exists banned_reason               text,
+  add column if not exists banned_at                   timestamptz,
+  add column if not exists banned_by                   uuid references public.profiles(id),
+  add column if not exists created_at                  timestamptz not null default now(),
+  add column if not exists updated_at                  timestamptz not null default now();
+
 create index if not exists idx_profiles_phone on public.profiles using btree (phone);
 create index if not exists idx_profiles_full_name_trgm on public.profiles using gin (full_name gin_trgm_ops);
 create index if not exists idx_profiles_brands on public.profiles using gin (brands);
