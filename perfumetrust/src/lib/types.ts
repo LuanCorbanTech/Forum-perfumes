@@ -12,6 +12,24 @@ export type TransactionStatus =
 
 export type ReportStatus = "pending" | "under_review" | "approved" | "rejected";
 
+export type ApprovalStatus = "pending" | "approved" | "rejected";
+
+// Guarda credenciais de integrações (migration_008) — só admin enxerga
+// essa tabela (RLS). Usada hoje pela aba /admin/configuracoes pra
+// configurar o envio de e-mail (Brevo) sem precisar de linha de comando.
+export interface AdminSetting {
+  key: string;
+  value: string | null;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+export const ADMIN_SETTING_KEYS = {
+  BREVO_API_KEY: "brevo_api_key",
+  BREVO_SENDER_EMAIL: "brevo_sender_email",
+  BREVO_SENDER_NAME: "brevo_sender_name",
+} as const;
+
 export type ReportReason =
   | "golpe"
   | "produto_nao_enviado"
@@ -42,6 +60,24 @@ export interface Profile {
   is_banned: boolean;
   banned_reason: string | null;
   banned_at: string | null;
+  approval_status: ApprovalStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+// Dados sensíveis de cadastro (migration_006/007) — vivem em
+// "profile_kyc", tabela separada e SEM leitura pública (ao contrário de
+// "profiles"). "cpf" só deve ser buscado no próprio /conta/verificacao
+// (o dono vendo o que enviou) ou nunca exposto ao cliente em telas de
+// terceiros — a tela de admin usa as fotos, não o CPF em si.
+export interface ProfileKyc {
+  profile_id: string;
+  cpf: string | null;
+  in_whatsapp_group: boolean;
+  document_front_path: string | null;
+  document_back_path: string | null;
+  selfie_path: string | null;
+  submitted_at: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -117,7 +117,11 @@ export function LoginForm() {
       return;
     }
 
-    router.push(searchParams.get("next") ?? "/");
+    // Quem acabou de se cadastrar precisa passar pela verificação de
+    // identidade (documento + selfie) antes de qualquer outra coisa —
+    // por isso o cadastro sempre vai para /conta/verificacao, ignorando
+    // o "next" (que só se aplica ao login normal).
+    router.push(isCadastro ? "/conta/verificacao" : searchParams.get("next") ?? "/");
     router.refresh();
   }
 

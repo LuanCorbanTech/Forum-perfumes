@@ -3,16 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { REPORT_REASON_LABELS, type ReportReason } from "@/lib/types";
+import { REPORT_REASON_LABELS, type ApprovalStatus, type ReportReason } from "@/lib/types";
+import { VerificationGate } from "@/components/VerificationGate";
 
 interface Props {
   reportedId: string;
   reportedName: string;
   transactionId?: string;
   currentUserId: string;
+  myApprovalStatus: ApprovalStatus;
 }
 
-export function ReportForm({ reportedId, reportedName, transactionId, currentUserId }: Props) {
+export function ReportForm({ reportedId, reportedName, transactionId, currentUserId, myApprovalStatus }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const [reason, setReason] = useState<ReportReason>("golpe");
@@ -20,6 +22,14 @@ export function ReportForm({ reportedId, reportedName, transactionId, currentUse
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // O banco (migration_003) já recusa a inserção se o denunciante não
+  // estiver aprovado — isso aqui só evita que a pessoa esbarre num erro
+  // cru de RLS e mostra o motivo real, com um link pra resolver. Fica
+  // depois dos hooks (nunca antes) pra não violar as Rules of Hooks.
+  if (myApprovalStatus !== "approved") {
+    return <VerificationGate status={myApprovalStatus} />;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

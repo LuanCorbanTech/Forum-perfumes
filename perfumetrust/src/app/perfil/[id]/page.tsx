@@ -9,7 +9,7 @@ import { TagIcon, BagIcon, TrophyIcon } from "@/components/icons";
 import { isVerifiedSeller, getTrustLevel, TRUST_LEVEL_SHORT } from "@/lib/trustScore";
 import { normalizeProfile } from "@/lib/normalizeProfile";
 import { createClient } from "@/lib/supabase/server";
-import type { Profile, Review } from "@/lib/types";
+import type { ApprovalStatus, Profile, Review } from "@/lib/types";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -46,14 +46,19 @@ export default async function PerfilPage({ params }: Props) {
   const starPct = Math.min(100, Math.max(0, (profile.average_rating / 5) * 100));
 
   let alreadyRecommended = false;
+  let myApprovalStatus: ApprovalStatus = "approved";
   if (user && !isOwnProfile) {
-    const { data: existingRecommendation } = await supabase
-      .from("recommendations")
-      .select("id")
-      .eq("recommender_id", user.id)
-      .eq("recommended_id", id)
-      .maybeSingle();
+    const [{ data: existingRecommendation }, { data: myProfile }] = await Promise.all([
+      supabase
+        .from("recommendations")
+        .select("id")
+        .eq("recommender_id", user.id)
+        .eq("recommended_id", id)
+        .maybeSingle(),
+      supabase.from("profiles").select("approval_status").eq("id", user.id).single<{ approval_status: ApprovalStatus }>(),
+    ]);
     alreadyRecommended = !!existingRecommendation;
+    myApprovalStatus = myProfile?.approval_status ?? "approved";
   }
 
   return (
@@ -259,7 +264,12 @@ export default async function PerfilPage({ params }: Props) {
         {!isOwnProfile && user && (
           <>
             <h2 className="mb-4 mt-11 text-xl font-bold text-obsidian-900">Algo errado?</h2>
-            <ReportForm reportedId={profile.id} reportedName={profile.full_name} currentUserId={user.id} />
+            <ReportForm
+              reportedId={profile.id}
+              reportedName={profile.full_name}
+              currentUserId={user.id}
+              myApprovalStatus={myApprovalStatus}
+            />
           </>
         )}
       </div>

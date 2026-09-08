@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { TransactionActions } from "@/components/TransactionActions";
 import { createClient } from "@/lib/supabase/server";
-import type { Profile, Transaction } from "@/lib/types";
+import type { ApprovalStatus, Profile, Transaction } from "@/lib/types";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -37,7 +37,7 @@ export default async function TransacaoPage({ params }: Props) {
   const isParticipant = user.id === transaction.buyer_id || user.id === transaction.seller_id;
   if (!isParticipant) notFound();
 
-  const [{ data: buyer }, { data: seller }, { data: myReview }] = await Promise.all([
+  const [{ data: buyer }, { data: seller }, { data: myReview }, { data: myProfile }] = await Promise.all([
     supabase.from("profiles").select("id, full_name").eq("id", transaction.buyer_id).single<Profile>(),
     supabase.from("profiles").select("id, full_name").eq("id", transaction.seller_id).single<Profile>(),
     supabase
@@ -46,7 +46,9 @@ export default async function TransacaoPage({ params }: Props) {
       .eq("transaction_id", transaction.id)
       .eq("reviewer_id", user.id)
       .maybeSingle(),
+    supabase.from("profiles").select("approval_status").eq("id", user.id).single<{ approval_status: ApprovalStatus }>(),
   ]);
+  const myApprovalStatus: ApprovalStatus = myProfile?.approval_status ?? "approved";
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -82,6 +84,7 @@ export default async function TransacaoPage({ params }: Props) {
         transaction={transaction}
         currentUserId={user.id}
         myReviewAlreadyExists={!!myReview}
+        myApprovalStatus={myApprovalStatus}
       />
     </div>
   );

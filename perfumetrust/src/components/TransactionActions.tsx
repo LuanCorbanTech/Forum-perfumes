@@ -3,17 +3,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { Transaction } from "@/lib/types";
+import type { ApprovalStatus, Transaction } from "@/lib/types";
+import { VerificationGate } from "@/components/VerificationGate";
 
 interface Props {
   transaction: Transaction;
   currentUserId: string;
   myReviewAlreadyExists: boolean;
+  myApprovalStatus: ApprovalStatus;
 }
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5MB
 
-export function TransactionActions({ transaction, currentUserId, myReviewAlreadyExists }: Props) {
+export function TransactionActions({ transaction, currentUserId, myReviewAlreadyExists, myApprovalStatus }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
@@ -120,7 +122,11 @@ export function TransactionActions({ transaction, currentUserId, myReviewAlready
         </div>
       )}
 
-      {transaction.status === "completed" && !myReviewAlreadyExists && (
+      {transaction.status === "completed" && !myReviewAlreadyExists && myApprovalStatus !== "approved" && (
+        <VerificationGate status={myApprovalStatus} />
+      )}
+
+      {transaction.status === "completed" && !myReviewAlreadyExists && myApprovalStatus === "approved" && (
         <form onSubmit={handleReview} className="space-y-3.5 rounded-card border border-sand-300 bg-white p-5">
           <p className="text-sm font-semibold text-obsidian-900">Avalie a outra parte</p>
           <div className="flex gap-1">

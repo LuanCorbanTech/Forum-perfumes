@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
+import { VerificationBanner } from "@/components/VerificationBanner";
+import type { ApprovalStatus } from "@/lib/types";
 
 export async function Navbar() {
   const supabase = await createClient();
@@ -8,11 +10,11 @@ export async function Navbar() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  let profile: { full_name: string; is_admin: boolean } | null = null;
+  let profile: { full_name: string; is_admin: boolean; approval_status: ApprovalStatus } | null = null;
   if (user) {
     const { data } = await supabase
       .from("profiles")
-      .select("full_name, is_admin")
+      .select("full_name, is_admin, approval_status")
       .eq("id", user.id)
       .single();
     profile = data;
@@ -21,6 +23,7 @@ export async function Navbar() {
   const navLinkClass = "text-[#C9CDD3] transition-colors hover:text-dourado";
 
   return (
+    <>
     <header className="sticky top-0 z-40 w-full max-w-full overflow-hidden h-[68px] border-b border-obsidian-600 bg-obsidian-900">
       <div className="mx-auto flex h-full max-w-6xl items-center gap-5 px-4 sm:px-7">
         <Link href="/" className="flex shrink-0 items-center gap-3">
@@ -131,5 +134,9 @@ export async function Navbar() {
         </nav>
       </div>
     </header>
+    {profile && (profile.approval_status === "pending" || profile.approval_status === "rejected") && (
+      <VerificationBanner status={profile.approval_status} />
+    )}
+    </>
   );
 }

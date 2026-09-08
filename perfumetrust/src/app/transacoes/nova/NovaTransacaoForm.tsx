@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
-import type { Profile } from "@/lib/types";
+import { VerificationGate } from "@/components/VerificationGate";
+import type { ApprovalStatus, Profile } from "@/lib/types";
 
 const STEPS = [
   {
@@ -35,6 +36,10 @@ export function NovaTransacaoForm() {
   const supabase = createClient();
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // "approved" como valor inicial evita piscar o aviso de bloqueio antes da
+  // consulta do próprio status terminar — assim que ela responde, o valor
+  // real (pending/rejected/approved) substitui esse chute otimista.
+  const [myApprovalStatus, setMyApprovalStatus] = useState<ApprovalStatus>("approved");
   const [seller, setSeller] = useState<Profile | null>(null);
   const [sellerQuery, setSellerQuery] = useState("");
   const [sellerOptions, setSellerOptions] = useState<Profile[]>([]);
@@ -44,7 +49,19 @@ export function NovaTransacaoForm() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+    supabase.auth.getUser().then(({ data }) => {
+      const uid = data.user?.id ?? null;
+      setCurrentUserId(uid);
+      if (!uid) return;
+      supabase
+        .from("profiles")
+        .select("approval_status")
+        .eq("id", uid)
+        .single()
+        .then(({ data: profile }) => {
+          if (profile?.approval_status) setMyApprovalStatus(profile.approval_status as ApprovalStatus);
+        });
+    });
   }, [supabase]);
 
   useEffect(() => {
@@ -81,6 +98,10 @@ export function NovaTransacaoForm() {
 
     if (!currentUserId) {
       setError("Você precisa estar logado.");
+      return;
+    }
+    if (myApprovalStatus !== "approved") {
+      setError("Seu cadastro ainda não foi aprovado. Envie seu documento e selfie para liberar essa ação.");
       return;
     }
     if (!seller) {
@@ -129,6 +150,9 @@ export function NovaTransacaoForm() {
       </p>
 
       <div className="grid items-start gap-6 [grid-template-columns:repeat(auto-fit,minmax(300px,1fr))]">
+        {myApprovalStatus !== "approved" ? (
+          <VerificationGate status={myApprovalStatus} />
+        ) : (
         <form onSubmit={handleSubmit} className="rounded-card border border-sand-300 bg-white p-6">
           <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
             Vendedor
@@ -214,6 +238,7 @@ export function NovaTransacaoForm() {
             {loading ? "Registrando..." : "Registrar transação"}
           </button>
         </form>
+        )}
 
         <div>
           <p className="mb-4 text-[9.5px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
