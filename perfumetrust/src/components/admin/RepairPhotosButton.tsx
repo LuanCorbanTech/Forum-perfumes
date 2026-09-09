@@ -31,7 +31,7 @@ export function RepairPhotosButton() {
       <button
         onClick={handleClick}
         disabled={loading}
-        className="rounded-lg border border-sand-400 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.02em] text-[#3C434C] transition-colors disabled:opacity-50 hover:border-obsidian-900 hover:text-obsidian-900"
+        className="text-[12px] font-medium text-[#8A8F98] underline decoration-dotted underline-offset-2 transition-colors disabled:opacity-50 hover:text-dourado-dark"
       >
         {loading ? "Corrigindo..." : "Corrigir fotos com ícone quebrado"}
       </button>

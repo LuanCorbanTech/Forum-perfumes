@@ -11,20 +11,52 @@ export default async function AdminUsuariosPage({ searchParams }: Props) {
   const { q } = await searchParams;
   const supabase = await createClient();
 
-  let query = supabase
-    .from("profiles")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(50);
+  let users: Profile[] = [];
 
   if (q && q.trim()) {
+    // Duas buscas separadas (em vez de um único .or() com o texto digitado
+    // interpolado cru) porque a sintaxe de filtro do PostgREST usa vírgula
+    // pra separar condições e parênteses pra agrupar — se o admin digitar
+    // um telefone com pontuação (ex.: "(11) 99999-8888" ou colar algo com
+    // vírgula), o filtro combinado quebrava e a busca voltava vazia sem
+    // erro nenhum aparecendo. Telefone é sempre guardado em E.164
+    // (+55DDDNNNNNNNNN), então comparamos só os dígitos.
     const digits = q.replace(/\D/g, "");
-    query = query.or(
-      digits.length >= 4 ? `full_name.ilike.%${q}%,phone.ilike.%${digits}%` : `full_name.ilike.%${q}%`
-    );
-  }
 
-  const { data: users } = await query.returns<Profile[]>();
+    const [byName, byPhone] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("*")
+        .ilike("full_name", `%${q.trim()}%`)
+        .order("created_at", { ascending: false })
+        .limit(50)
+        .returns<Profile[]>(),
+      digits.length >= 4
+        ? supabase
+            .from("profiles")
+            .select("*")
+            .ilike("phone", `%${digits}%`)
+            .order("created_at", { ascending: false })
+            .limit(50)
+            .returns<Profile[]>()
+        : Promise.resolve({ data: [] as Profile[] }),
+    ]);
+
+    const merged = new Map<string, Profile>();
+    for (const u of byName.data ?? []) merged.set(u.id, u);
+    for (const u of byPhone.data ?? []) merged.set(u.id, u);
+    users = Array.from(merged.values()).sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  } else {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(50)
+      .returns<Profile[]>();
+    users = data ?? [];
+  }
 
   return (
     <div className="space-y-7">
@@ -87,7 +119,15 @@ export default async function AdminUsuariosPage({ searchParams }: Props) {
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  {!user.is_admin && <UserBanActions userId={user.id} isBanned={user.is_banned} />}
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <Link
+                      href={`/admin/usuarios/${user.id}`}
+                      className="whitespace-nowrap text-[12px] font-medium text-dourado-dark"
+                    >
+                      Ver documentos
+                    </Link>
+                    {!user.is_admin && <UserBanActions userId={user.id} isBanned={user.is_banned} />}
+                  </div>
                 </td>
               </tr>
             ))}
