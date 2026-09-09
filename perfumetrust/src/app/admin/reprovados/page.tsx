@@ -1,5 +1,7 @@
 import type { RejectedSignup } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
+import { ensureCorrectContentType } from "@/app/admin/cadastros/actions";
+import { PhotoSlot } from "@/components/admin/PhotoSlot";
 
 // Arquivo só de consulta (migration_012): quando um cadastro é recusado,
 // a conta ativa é apagada de verdade (pra liberar CPF/telefone/e-mail pra
@@ -28,6 +30,10 @@ export default async function AdminReprovadosPage() {
 
   const entries = await Promise.all(
     (rows ?? []).map(async (row) => {
+      // Corrige sozinho qualquer foto com Content-Type errado (ícone
+      // quebrado) antes de gerar os links — sem precisar de botão manual.
+      await ensureCorrectContentType([row.document_front_path, row.document_back_path, row.selfie_path]);
+
       const [frontUrl, backUrl, selfieUrl] = await Promise.all([
         signedUrl(supabase, row.document_front_path),
         signedUrl(supabase, row.document_back_path),
@@ -101,37 +107,6 @@ export default async function AdminReprovadosPage() {
         </ul>
       ) : (
         <p className="text-[#8A8F98]">Nenhum cadastro recusado ainda.</p>
-      )}
-    </div>
-  );
-}
-
-function PhotoSlot({ label, url }: { label: string; url: string | null }) {
-  const isPdf = !!url && url.split("?")[0].toLowerCase().endsWith(".pdf");
-
-  return (
-    <div>
-      <p className="mb-1.5 text-[9.5px] font-medium uppercase tracking-[0.02em] text-[#8A8F98]">{label}</p>
-      {url ? (
-        isPdf ? (
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className="flex h-28 w-full flex-col items-center justify-center gap-1 rounded-lg border border-sand-300 bg-sand text-[11px] font-medium text-[#5B6470] hover:border-dourado hover:text-dourado-dark"
-          >
-            <span className="text-xl">📄</span>
-            Abrir PDF
-          </a>
-        ) : (
-          <a href={url} target="_blank" rel="noreferrer">
-            <img src={url} alt={label} className="h-28 w-full rounded-lg border border-sand-300 object-cover" />
-          </a>
-        )
-      ) : (
-        <div className="flex h-28 w-full items-center justify-center rounded-lg border border-dashed border-sand-400 text-[10px] text-[#8A8F98]">
-          Sem foto
-        </div>
       )}
     </div>
   );

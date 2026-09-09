@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Profile, ProfileKyc } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
+import { ensureCorrectContentType } from "@/app/admin/cadastros/actions";
+import { PhotoSlot } from "@/components/admin/PhotoSlot";
 
 // Documento e selfie continuam guardados mesmo depois do cadastro
 // aprovado (nunca são apagados) — esta tela existe justamente pra dar ao
@@ -43,6 +45,15 @@ export default async function AdminUsuarioDocumentosPage({
     .eq("profile_id", id)
     .maybeSingle<ProfileKyc>();
 
+  // Corrige sozinho, na hora, qualquer foto que ainda tenha o Content-Type
+  // errado (ícone quebrado) antes de gerar os links — sem precisar de
+  // nenhum botão de manutenção manual.
+  await ensureCorrectContentType([
+    kyc?.document_front_path ?? null,
+    kyc?.document_back_path ?? null,
+    kyc?.selfie_path ?? null,
+  ]);
+
   const [frontUrl, backUrl, selfieUrl] = await Promise.all([
     signedUrl(supabase, kyc?.document_front_path ?? null),
     signedUrl(supabase, kyc?.document_back_path ?? null),
@@ -74,45 +85,18 @@ export default async function AdminUsuarioDocumentosPage({
 
       {kyc ? (
         <div className={`grid gap-3 ${isDigital ? "grid-cols-2" : "grid-cols-3"} max-w-2xl`}>
-          <PhotoSlot label={isDigital ? "Documento (PDF/único)" : "Documento (frente)"} url={frontUrl} />
-          {!isDigital && <PhotoSlot label="Documento (verso)" url={backUrl} />}
-          <PhotoSlot label="Selfie" url={selfieUrl} />
+          <PhotoSlot
+            label={isDigital ? "Documento (PDF/único)" : "Documento (frente)"}
+            url={frontUrl}
+            heightClassName="h-32"
+          />
+          {!isDigital && <PhotoSlot label="Documento (verso)" url={backUrl} heightClassName="h-32" />}
+          <PhotoSlot label="Selfie" url={selfieUrl} heightClassName="h-32" />
         </div>
       ) : (
         <p className="text-[13px] font-normal italic text-[#8A8F98]">
           Essa pessoa ainda não enviou documento nem selfie.
         </p>
-      )}
-    </div>
-  );
-}
-
-function PhotoSlot({ label, url }: { label: string; url: string | null }) {
-  const isPdf = !!url && url.split("?")[0].toLowerCase().endsWith(".pdf");
-
-  return (
-    <div>
-      <p className="mb-1.5 text-[9.5px] font-medium uppercase tracking-[0.02em] text-[#8A8F98]">{label}</p>
-      {url ? (
-        isPdf ? (
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className="flex h-32 w-full flex-col items-center justify-center gap-1 rounded-lg border border-sand-300 bg-sand text-[11px] font-medium text-[#5B6470] hover:border-dourado hover:text-dourado-dark"
-          >
-            <span className="text-xl">📄</span>
-            Abrir PDF
-          </a>
-        ) : (
-          <a href={url} target="_blank" rel="noreferrer">
-            <img src={url} alt={label} className="h-32 w-full rounded-lg border border-sand-300 object-cover" />
-          </a>
-        )
-      ) : (
-        <div className="flex h-32 w-full items-center justify-center rounded-lg border border-dashed border-sand-400 text-[10px] text-[#8A8F98]">
-          Sem foto
-        </div>
       )}
     </div>
   );
