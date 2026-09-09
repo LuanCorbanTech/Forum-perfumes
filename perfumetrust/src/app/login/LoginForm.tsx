@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DocSlot } from "@/components/DocSlot";
+import { convertHeicIfNeeded } from "@/lib/convertHeic";
 import { signUpComDocumentos } from "./actions";
 import type { DocumentType } from "@/lib/types";
 
@@ -160,15 +161,19 @@ export function LoginForm() {
     router.refresh();
   }
 
-  function handleDocFileChange(slot: DocSlotKey, e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null;
+  async function handleDocFileChange(slot: DocSlotKey, e: React.ChangeEvent<HTMLInputElement>) {
+    const rawFile = e.target.files?.[0] ?? null;
     setDocErrors((prev) => ({ ...prev, [slot]: null }));
-    if (file && file.size > MAX_PHOTO_BYTES) {
+    if (rawFile && rawFile.size > MAX_PHOTO_BYTES) {
       setDocErrors((prev) => ({ ...prev, [slot]: "O arquivo precisa ter até 8MB." }));
       setDocFiles((prev) => ({ ...prev, [slot]: null }));
       e.target.value = "";
       return;
     }
+    // Converte HEIC/HEIF (padrão do iPhone) pra JPEG aqui mesmo, antes de
+    // guardar o arquivo — assim a pré-visualização e o envio já usam algo
+    // que qualquer navegador consegue exibir.
+    const file = rawFile ? await convertHeicIfNeeded(rawFile) : null;
     setDocFiles((prev) => ({ ...prev, [slot]: file }));
     setDocPreviews((prev) => ({ ...prev, [slot]: file ? URL.createObjectURL(file) : null }));
   }

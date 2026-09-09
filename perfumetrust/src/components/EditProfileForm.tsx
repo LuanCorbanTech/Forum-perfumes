@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { convertHeicIfNeeded } from "@/lib/convertHeic";
 import { BRAND_LIST, ITEM_TYPE_LIST } from "@/lib/types";
 import type { Profile } from "@/lib/types";
 import { Avatar } from "./Avatar";
@@ -32,15 +33,19 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
     setItemTypes((prev) => (prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]));
   }
 
-  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null;
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const rawFile = e.target.files?.[0] ?? null;
     setAvatarError(null);
-    if (file && file.size > MAX_PHOTO_BYTES) {
+    if (rawFile && rawFile.size > MAX_PHOTO_BYTES) {
       setAvatarError("A foto precisa ter até 5MB.");
       setAvatarFile(null);
       e.target.value = "";
       return;
     }
+    // Converte HEIC/HEIF (padrão do iPhone) pra JPEG — sem isso, uma foto
+    // de perfil enviada direto da câmera do iPhone fica com o mesmo ícone
+    // quebrado que afetava os documentos de verificação.
+    const file = rawFile ? await convertHeicIfNeeded(rawFile) : null;
     setAvatarFile(file);
     if (file) setAvatarPreview(URL.createObjectURL(file));
   }
