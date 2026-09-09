@@ -31,13 +31,23 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // Atrás de um proxy reverso (ex.: DigitalOcean App Platform), a origem
+  // derivada de request.url/request.nextUrl pode vir errada — aponta pro
+  // endereço interno do container (ex.: "http://localhost:8080") em vez do
+  // domínio público que a pessoa realmente está usando (mesmo problema já
+  // corrigido em src/app/auth/callback/route.ts e src/app/auth/sair/route.ts).
+  // Por isso preferimos a variável de ambiente pública configurada no App
+  // (NEXT_PUBLIC_SITE_URL), caindo pra origem da requisição só como reserva
+  // (ex.: rodando localmente, sem essa variável).
+  const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL ?? request.nextUrl.origin).replace(/\/$/, "");
+
   // Compara por segmento de rota (não por substring): "/conta" deve
   // proteger "/conta" e "/conta/x", mas não páginas como "/contato".
   const protectedPrefixes = ["/transacoes", "/denuncias", "/admin", "/conta"];
   const isProtected = protectedPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (isProtected && !user) {
-    const redirectUrl = new URL("/login", request.url);
+    const redirectUrl = new URL("/login", siteOrigin);
     redirectUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(redirectUrl);
   }
@@ -51,7 +61,7 @@ export async function middleware(request: NextRequest) {
       .single();
 
     if (!profile?.is_admin) {
-      return NextResponse.redirect(new URL("/", request.url));
+      return NextResponse.redirect(new URL("/", siteOrigin));
     }
   }
 

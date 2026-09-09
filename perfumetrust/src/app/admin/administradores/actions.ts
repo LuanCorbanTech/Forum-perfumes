@@ -67,6 +67,20 @@ export async function createAdminAccount(input: CreateAdminInput): Promise<Creat
 
   const adminClient = createAdminClient();
 
+  // Confere ANTES de criar a conta no Auth — sem isso, um nome de usuário
+  // já em uso só falharia depois (no update() logo abaixo), deixando pra
+  // trás uma conta criada no Auth mas nunca promovida a admin.
+  if (username) {
+    const { data: existing } = await adminClient
+      .from("profiles")
+      .select("id")
+      .ilike("username", username)
+      .maybeSingle();
+    if (existing) {
+      return { ok: false, error: "Esse nome de usuário já está em uso por outra conta." };
+    }
+  }
+
   const { data: created, error: createError } = await adminClient.auth.admin.createUser({
     email,
     password,
@@ -99,9 +113,13 @@ export async function createAdminAccount(input: CreateAdminInput): Promise<Creat
     .eq("id", created.user.id);
 
   if (updateError) {
+    // Desfaz a criação no Auth pra não deixar pra trás uma conta "pela
+    // metade" (existe no Auth, mas nunca virou admin de verdade) — melhor
+    // a pessoa tentar de novo do zero com um nome de usuário diferente.
+    await adminClient.auth.admin.deleteUser(created.user.id);
     return {
       ok: false,
-      error: `Conta criada, mas não deu pra marcar como admin: ${updateError.message}`,
+      error: `Não foi possível marcar a conta como admin (${updateError.message}). Nada foi criado — tenta de novo.`,
     };
   }
 
