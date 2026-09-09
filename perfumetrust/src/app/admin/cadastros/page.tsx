@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SignupReviewActions } from "@/components/admin/SignupReviewActions";
+import { RepairPhotosButton } from "@/components/admin/RepairPhotosButton";
 import type { Profile, ProfileKyc } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -89,10 +90,12 @@ export default async function AdminCadastrosPage() {
       <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.02em] text-dourado">Administração</p>
       <h1 className="mb-7 font-serif text-4xl font-medium leading-none text-obsidian-900">Cadastros</h1>
 
-      <div className="mb-8 flex flex-wrap gap-8">
+      <div className="mb-6 flex flex-wrap gap-8">
         <Counter value={pendentes} label="aguardando análise" />
         <Counter value={semFotos} label="sem fotos enviadas" />
       </div>
+
+      <RepairPhotosButton />
 
       {candidates.length > 0 ? (
         <ul className="grid gap-4">

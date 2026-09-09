@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { rejectSignup } from "@/app/admin/cadastros/actions";
 
 export function SignupReviewActions({ userId, canApprove }: { userId: string; canApprove: boolean }) {
   const router = useRouter();
@@ -16,12 +17,28 @@ export function SignupReviewActions({ userId, canApprove }: { userId: string; ca
     setLoading(true);
     setError(null);
     setEmailNotice(null);
+
+    if (!approve) {
+      // Recusar arquiva os dados/documentos em "Clientes reprovados" e
+      // apaga a conta ativa de verdade (ver rejectSignup) — CPF, telefone,
+      // e-mail e usuário ficam livres pra um cadastro novo.
+      const result = await rejectSignup(userId, notes.trim() || null);
+      setLoading(false);
+      if (!result.ok) {
+        setError(result.error ?? "Não foi possível recusar o cadastro.");
+        return;
+      }
+      if (result.notice) setEmailNotice(result.notice);
+      router.refresh();
+      return;
+    }
+
     // O próprio banco (admin_review_signup, migration_007) recusa a
     // aprovação se faltar alguma das 3 fotos — a mensagem de erro do
     // Postgres aparece direto aqui embaixo se isso acontecer.
     const { error } = await supabase.rpc("admin_review_signup", {
       p_user_id: userId,
-      p_approve: approve,
+      p_approve: true,
       p_notes: notes.trim() || null,
     });
     if (error) {
@@ -30,12 +47,12 @@ export function SignupReviewActions({ userId, canApprove }: { userId: string; ca
       return;
     }
 
-    // Aviso por e-mail (Brevo) é "melhor esforço": a aprovação/recusa acima
-    // já valeu de qualquer forma, então uma falha aqui só vira um aviso
+    // Aviso por e-mail (Brevo) é "melhor esforço": a aprovação acima já
+    // valeu de qualquer forma, então uma falha aqui só vira um aviso
     // discreto, nunca um erro bloqueante (ver supabase/functions/notify-signup-review).
     try {
       const { data, error: notifyError } = await supabase.functions.invoke("notify-signup-review", {
-        body: { userId, approved: approve, notes: notes.trim() || null },
+        body: { userId, approved: true, notes: notes.trim() || null },
       });
       if (notifyError) {
         setEmailNotice("Cadastro atualizado, mas não deu pra confirmar o envio do e-mail de aviso.");

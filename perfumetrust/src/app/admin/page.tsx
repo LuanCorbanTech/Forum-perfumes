@@ -50,6 +50,12 @@ export default async function AdminDashboardPage() {
           Revisar cadastros
         </Link>
         <Link
+          href="/admin/reprovados"
+          className="rounded-lg border border-sand-400 px-4 py-2.5 text-[12px] font-semibold uppercase tracking-[0.02em] text-[#3C434C] transition-colors hover:border-obsidian-900 hover:text-obsidian-900"
+        >
+          Clientes reprovados
+        </Link>
+        <Link
           href="/admin/usuarios"
           className="rounded-lg border border-sand-400 px-4 py-2.5 text-[12px] font-semibold uppercase tracking-[0.02em] text-[#3C434C] transition-colors hover:border-obsidian-900 hover:text-obsidian-900"
         >

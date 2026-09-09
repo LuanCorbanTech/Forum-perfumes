@@ -4,8 +4,26 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { DocSlot } from "@/components/DocSlot";
+import { signUpComDocumentos } from "./actions";
+import type { DocumentType } from "@/lib/types";
 
 type View = "login" | "cadastro" | "esqueci-senha";
+
+type DocSlotKey = "front" | "back" | "selfie";
+
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // 8MB
+
+const FRONT_LABELS: Record<DocumentType, { label: string; hint: string }> = {
+  fisico: {
+    label: "Documento (frente)",
+    hint: "RG, CNH ou outro documento oficial com foto, lado da frente.",
+  },
+  digital: {
+    label: "Documento (PDF ou foto única)",
+    hint: 'Ex.: o PDF da "CNH Digital" ou da "Carteira de Identidade Nacional / RG Digital" (app Meu Governo/gov.br), ou outro documento que já vem com tudo numa página só.',
+  },
+};
 
 // Login/cadastro por e-mail (ou nome de usuário) + senha (migration_009).
 // Antes disso o site usava código por e-mail/SMS (OTP) — trocado porque
@@ -34,12 +52,38 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  // Documento + selfie já na tela de cadastro (antes só vinham depois,
+  // em /conta/verificacao) — ver src/app/login/actions.ts.
+  const [documentType, setDocumentType] = useState<DocumentType>("fisico");
+  const [docFiles, setDocFiles] = useState<Record<DocSlotKey, File | null>>({
+    front: null,
+    back: null,
+    selfie: null,
+  });
+  const [docPreviews, setDocPreviews] = useState<Record<DocSlotKey, string | null>>({
+    front: null,
+    back: null,
+    selfie: null,
+  });
+  const [docErrors, setDocErrors] = useState<Record<DocSlotKey, string | null>>({
+    front: null,
+    back: null,
+    selfie: null,
+  });
+
   // "Esqueci minha senha".
   const [forgotId, setForgotId] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // "?erro=pendente" vem do middleware (src/middleware.ts), quando uma
+  // sessão antiga de alguém ainda não aprovado tenta usar uma rota
+  // protegida — mostra o mesmo aviso que já aparece ao tentar logar.
+  const [error, setError] = useState<string | null>(
+    searchParams.get("erro") === "pendente"
+      ? "Seu cadastro ainda está em análise (ou não foi aprovado). Você vai receber um e-mail assim que houver uma decisão."
+      : null
+  );
   const [cadastroFeito, setCadastroFeito] = useState(false);
 
   async function resolveEmail(loginInput: string): Promise<string | null> {
@@ -80,20 +124,53 @@ export function LoginForm() {
       return;
     }
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email: resolvedEmail,
       password: loginPassword,
     });
 
-    setLoading(false);
     if (signInError) {
+      setLoading(false);
       setError(friendlyAuthError(signInError.message));
       return;
     }
 
+    // O acesso só libera depois que um admin aprova o cadastro (dados +
+    // documento + selfie, enviados juntos em /login?modo=cadastro) — a
+    // senha pode estar certinha, mas sem aprovação a pessoa não entra.
+    const uid = signInData.user?.id;
+    const { data: profile } = uid
+      ? await supabase.from("profiles").select("approval_status").eq("id", uid).single()
+      : { data: null };
+
+    if (profile?.approval_status !== "approved") {
+      await supabase.auth.signOut();
+      setLoading(false);
+      setError(
+        profile?.approval_status === "rejected"
+          ? "Seu cadastro não foi aprovado. Você pode se cadastrar novamente ou falar com a gente."
+          : "Seu cadastro ainda está em análise. Você vai receber um e-mail assim que for aprovado."
+      );
+      return;
+    }
+
+    setLoading(false);
     const next = searchParams.get("next") ?? "/";
     router.push(next);
     router.refresh();
+  }
+
+  function handleDocFileChange(slot: DocSlotKey, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setDocErrors((prev) => ({ ...prev, [slot]: null }));
+    if (file && file.size > MAX_PHOTO_BYTES) {
+      setDocErrors((prev) => ({ ...prev, [slot]: "O arquivo precisa ter até 8MB." }));
+      setDocFiles((prev) => ({ ...prev, [slot]: null }));
+      e.target.value = "";
+      return;
+    }
+    setDocFiles((prev) => ({ ...prev, [slot]: file }));
+    setDocPreviews((prev) => ({ ...prev, [slot]: file ? URL.createObjectURL(file) : null }));
   }
 
   async function handleCadastro(e: React.FormEvent) {
@@ -132,37 +209,40 @@ export function LoginForm() {
       setError("As senhas não são iguais.");
       return;
     }
-
-    setLoading(true);
-
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        data: {
-          full_name: fullName || undefined,
-          username: username.trim() || undefined,
-          phone: normalizePhone(phone),
-          cpf: cpf.replace(/\D/g, ""),
-          in_whatsapp_group: inWhatsappGroup === "sim",
-        },
-        // Sem isso, o Supabase usa a "Site URL" padrão como destino do
-        // link do e-mail e ignora nossa rota /auth/callback.
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/conta/verificacao")}`,
-      },
-    });
-
-    setLoading(false);
-    if (signUpError) {
-      setError(friendlyAuthError(signUpError.message));
+    const isDigital = documentType === "digital";
+    if (!docFiles.front) {
+      setError(isDigital ? "Envie o documento." : "Envie o documento (frente).");
+      return;
+    }
+    if (!isDigital && !docFiles.back) {
+      setError("Envie o documento (verso).");
+      return;
+    }
+    if (!docFiles.selfie) {
+      setError("Envie a selfie.");
       return;
     }
 
-    // Se a confirmação de e-mail estiver desativada no projeto, o
-    // signUp já devolve uma sessão pronta — nesse caso pode entrar direto.
-    if (data.session) {
-      router.push("/conta/verificacao");
-      router.refresh();
+    setLoading(true);
+
+    const formData = new FormData();
+    formData.set("fullName", fullName);
+    formData.set("username", username.trim());
+    formData.set("email", email.trim());
+    formData.set("phone", normalizePhone(phone));
+    formData.set("cpf", cpf.replace(/\D/g, ""));
+    formData.set("inWhatsappGroup", inWhatsappGroup);
+    formData.set("password", password);
+    formData.set("documentType", documentType);
+    formData.set("front", docFiles.front);
+    if (docFiles.back) formData.set("back", docFiles.back);
+    formData.set("selfie", docFiles.selfie);
+
+    const result = await signUpComDocumentos(formData);
+
+    setLoading(false);
+    if (!result.ok) {
+      setError(result.error ?? "Não foi possível concluir o cadastro. Tente novamente.");
       return;
     }
 
@@ -205,11 +285,12 @@ export function LoginForm() {
         <div className="rounded-card border border-sand-300 bg-white p-[26px] text-center">
           <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.02em] text-dourado">Cadastro</p>
           <h1 className="mb-3 font-serif text-3xl font-medium leading-none text-obsidian-900">
-            Confirme seu e-mail
+            Cadastro enviado
           </h1>
           <p className="text-sm font-normal leading-relaxed text-[#5B6470]">
-            Mandamos um link de confirmação para <strong>{email}</strong>. Abre o e-mail e clica no
-            link — assim que confirmar, você já pode enviar seu documento e selfie para verificação.
+            Recebemos seus dados, documento e selfie. Um administrador vai analisar tudo em breve —
+            você recebe um e-mail em <strong>{email}</strong> assim que seu cadastro for aprovado
+            (e já pode fazer login normalmente).
           </p>
           <Link
             href="/login"
@@ -413,6 +494,81 @@ export function LoginForm() {
                 <option value="sim">Sim, já participo</option>
                 <option value="nao">Não, ainda não</option>
               </select>
+            </div>
+
+            <div className="border-t border-sand-200 pt-4">
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                Verificação de identidade
+              </p>
+              <p className="mb-3 text-[12.5px] font-normal text-[#8A8F98]">
+                Envie seu documento e uma selfie já aqui — um admin analisa tudo antes de liberar seu
+                acesso.
+              </p>
+
+              <div className="mb-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDocumentType("fisico")}
+                  className={`rounded-lg border px-3.5 py-2.5 text-[12.5px] font-semibold transition-colors ${
+                    documentType === "fisico"
+                      ? "border-dourado bg-dourado-tint text-dourado-dark"
+                      : "border-sand-400 text-[#5B6470] hover:border-obsidian-900 hover:text-obsidian-900"
+                  }`}
+                >
+                  Documento físico (frente e verso)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDocumentType("digital")}
+                  className={`rounded-lg border px-3.5 py-2.5 text-[12.5px] font-semibold transition-colors ${
+                    documentType === "digital"
+                      ? "border-dourado bg-dourado-tint text-dourado-dark"
+                      : "border-sand-400 text-[#5B6470] hover:border-obsidian-900 hover:text-obsidian-900"
+                  }`}
+                >
+                  CNH Digital, RG Digital ou documento único (PDF)
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <DocSlot
+                  slotKey="front"
+                  label={FRONT_LABELS[documentType].label}
+                  hint={FRONT_LABELS[documentType].hint}
+                  accept={documentType === "digital" ? "image/*,application/pdf" : "image/*"}
+                  capture={documentType === "digital" ? undefined : "environment"}
+                  file={docFiles.front}
+                  previewUrl={docPreviews.front}
+                  error={docErrors.front}
+                  onChange={(e) => handleDocFileChange("front", e)}
+                />
+
+                {documentType === "fisico" && (
+                  <DocSlot
+                    slotKey="back"
+                    label="Documento (verso)"
+                    hint="O mesmo documento, lado de trás."
+                    accept="image/*"
+                    capture="environment"
+                    file={docFiles.back}
+                    previewUrl={docPreviews.back}
+                    error={docErrors.back}
+                    onChange={(e) => handleDocFileChange("back", e)}
+                  />
+                )}
+
+                <DocSlot
+                  slotKey="selfie"
+                  label="Selfie"
+                  hint="Uma foto sua, de rosto, tirada na hora (abra a câmera frontal)."
+                  accept="image/*"
+                  capture="user"
+                  file={docFiles.selfie}
+                  previewUrl={docPreviews.selfie}
+                  error={docErrors.selfie}
+                  onChange={(e) => handleDocFileChange("selfie", e)}
+                />
+              </div>
             </div>
 
             <div>

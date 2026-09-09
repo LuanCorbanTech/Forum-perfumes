@@ -53,14 +53,24 @@ export async function middleware(request: NextRequest) {
   }
 
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
-  if (isAdminRoute && user) {
+  if (isProtected && user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("is_admin")
+      .select("is_admin, approval_status")
       .eq("id", user.id)
       .single();
 
-    if (!profile?.is_admin) {
+    // Reforço de segurança (a checagem principal já acontece no login,
+    // em LoginForm.tsx, que desloga na hora quem não está aprovado): uma
+    // sessão antiga de alguém ainda não aprovado (ou recusado) não deve
+    // conseguir usar rotas protegidas só porque o token continua válido.
+    if (profile?.approval_status !== "approved") {
+      const redirectUrl = new URL("/login", siteOrigin);
+      redirectUrl.searchParams.set("erro", "pendente");
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    if (isAdminRoute && !profile?.is_admin) {
       return NextResponse.redirect(new URL("/", siteOrigin));
     }
   }

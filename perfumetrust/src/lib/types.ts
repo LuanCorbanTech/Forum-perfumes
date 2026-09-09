@@ -92,6 +92,26 @@ export interface ProfileKyc {
   updated_at: string;
 }
 
+// Arquivo de cadastros recusados (migration_012) — snapshot só de
+// consulta: a conta ativa correspondente já foi apagada (ver
+// src/app/admin/cadastros/actions.ts, rejectSignup).
+export interface RejectedSignup {
+  id: string;
+  original_profile_id: string | null;
+  full_name: string | null;
+  phone: string | null;
+  email: string | null;
+  username: string | null;
+  cpf: string | null;
+  document_type: DocumentType | null;
+  document_front_path: string | null;
+  document_back_path: string | null;
+  selfie_path: string | null;
+  notes: string | null;
+  rejected_by: string | null;
+  rejected_at: string;
+}
+
 export interface Transaction {
   id: string;
   seller_id: string;

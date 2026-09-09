@@ -98,22 +98,22 @@ Deno.serve(async (req: Request) => {
 
     const subject = approved
       ? "Seu cadastro no Cheiro Novo foi aprovado"
-      : "Sua verificação no Cheiro Novo precisa ser reenviada";
+      : "Seu cadastro no Cheiro Novo não foi aprovado";
 
     const bodyHtml = approved
       ? `<p style="margin:0 0 16px;">${greeting}</p>
          <p style="margin:0 0 16px;">Boa notícia: seu documento e sua selfie foram conferidos, e o seu cadastro no Cheiro Novo foi <strong>aprovado</strong>.</p>
-         <p style="margin:0;">Agora você já pode registrar transações, avaliar vendedores e denunciar problemas normalmente no site.</p>`
+         <p style="margin:0;">Você já pode entrar no site com o e-mail (ou nome de usuário) e a senha que cadastrou, e registrar transações, avaliar vendedores e denunciar problemas normalmente.</p>`
       : `<p style="margin:0 0 16px;">${greeting}</p>
          <p style="margin:0 0 16px;">Conferimos os arquivos que você enviou e, por enquanto, não deu para aprovar seu cadastro no Cheiro Novo.</p>
          ${notes ? `<p style="margin:0 0 16px;"><strong>Motivo:</strong> ${escapeHtml(String(notes))}</p>` : ""}
-         <p style="margin:0;">Entre no site e acesse "Verificação de identidade" para reenviar o documento e a selfie.</p>`;
+         <p style="margin:0;">Você pode se cadastrar de novo a qualquer momento (por exemplo, com fotos melhores do documento ou da selfie), ou falar com a gente se preferir entender melhor o motivo.</p>`;
 
     const htmlContent = buildEmailHtml({
-      title: approved ? "Cadastro aprovado" : "Verificação pendente",
+      title: approved ? "Cadastro aprovado" : "Cadastro não aprovado",
       bodyHtml,
-      ctaLabel: approved ? "Ir para o site" : "Reenviar documento",
-      ctaPath: approved ? "/" : "/conta/verificacao",
+      ctaLabel: approved ? "Entrar no site" : "Fazer novo cadastro",
+      ctaPath: approved ? "/login" : "/login?modo=cadastro",
       logoUrl,
       siteUrl,
       senderName,
