@@ -69,13 +69,17 @@ export async function repairPhotoContentTypes(): Promise<RepairResult> {
   return { ok: true, fixed, checked: paths.size };
 }
 
-// Versão automática/silenciosa do conserto acima: chamada pelas próprias
-// páginas de admin (cadastros, usuários, reprovados) toda vez que elas vão
-// mostrar documentos, ANTES de gerar o link assinado — assim ninguém
-// precisa clicar em nada, a foto já aparece certa na primeira vez que
-// alguém abre a tela. Rápida quando não tem nada errado: um list() por
-// pasta só pra checar o tipo já salvo, e só baixa/regrava o arquivo se
-// realmente estiver diferente do esperado.
+// Versão automática do conserto acima: chamada pelas próprias páginas de
+// admin (cadastros, usuários, reprovados) toda vez que elas vão mostrar
+// documentos, ANTES de gerar o link assinado — ninguém precisa clicar em
+// nada, a foto já é regravada com o Content-Type certo antes do link ser
+// gerado. Sempre baixa e regrava (não tenta "adivinhar" primeiro se já
+// está certo) — são no máximo 3 arquivos por tela, então o custo é baixo,
+// e isso evita depender de o list() da Storage devolver metadata confiável
+// (motivo pelo qual a versão anterior, que só corrigia quando detectava
+// diferença, não estava realmente corrigindo nada). Qualquer falha fica
+// registrada nos Runtime Logs do servidor (console.error), pra dar pra
+// investigar sem precisar adivinhar.
 export async function ensureCorrectContentType(paths: (string | null | undefined)[]): Promise<void> {
   const auth = await requireAdmin();
   if (!auth.ok) return;
@@ -85,35 +89,29 @@ export async function ensureCorrectContentType(paths: (string | null | undefined
 
   const adminClient = createAdminClient();
 
-  // Agrupa por pasta ("<userId>/arquivo.ext") porque o list() da Storage
-  // só lista o conteúdo de uma pasta de cada vez.
-  const byFolder = new Map<string, string[]>();
-  for (const path of validPaths) {
-    const idx = path.lastIndexOf("/");
-    const folder = idx === -1 ? "" : path.slice(0, idx);
-    const name = idx === -1 ? path : path.slice(idx + 1);
-    if (!byFolder.has(folder)) byFolder.set(folder, []);
-    byFolder.get(folder)!.push(name);
-  }
+  await Promise.all(
+    validPaths.map(async (path) => {
+      try {
+        const { data: fileBlob, error: downloadError } = await adminClient.storage
+          .from("verification-docs")
+          .download(path);
+        if (downloadError || !fileBlob) {
+          console.error(`[ensureCorrectContentType] falha ao baixar "${path}":`, downloadError?.message);
+          return;
+        }
 
-  for (const [folder, names] of byFolder) {
-    const { data: entries } = await adminClient.storage.from("verification-docs").list(folder || undefined);
-    if (!entries) continue;
-
-    for (const name of names) {
-      const path = folder ? `${folder}/${name}` : name;
-      const expected = resolveContentType({ name: path, type: "" });
-      const stored = entries.find((e) => e.name === name)?.metadata?.mimetype;
-      if (stored === expected) continue; // já está certo, não mexe
-
-      const { data: fileBlob, error: downloadError } = await adminClient.storage
-        .from("verification-docs")
-        .download(path);
-      if (downloadError || !fileBlob) continue;
-
-      await adminClient.storage.from("verification-docs").upload(path, fileBlob, { contentType: expected, upsert: true });
-    }
-  }
+        const contentType = resolveContentType({ name: path, type: "" });
+        const { error: uploadError } = await adminClient.storage
+          .from("verification-docs")
+          .upload(path, fileBlob, { contentType, upsert: true });
+        if (uploadError) {
+          console.error(`[ensureCorrectContentType] falha ao regravar "${path}":`, uploadError.message);
+        }
+      } catch (err) {
+        console.error(`[ensureCorrectContentType] erro inesperado em "${path}":`, err);
+      }
+    })
+  );
 }
 
 interface RejectResult {
