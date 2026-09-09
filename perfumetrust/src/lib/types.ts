@@ -28,6 +28,10 @@ export const ADMIN_SETTING_KEYS = {
   BREVO_API_KEY: "brevo_api_key",
   BREVO_SENDER_EMAIL: "brevo_sender_email",
   BREVO_SENDER_NAME: "brevo_sender_name",
+  // Aparência do e-mail de aprovação/recusa de cadastro (migration_010 não
+  // mexe no banco pra isso — "admin_settings" já aceita qualquer chave).
+  EMAIL_LOGO_URL: "email_logo_url",
+  EMAIL_SITE_URL: "email_site_url",
 } as const;
 
 export type ReportReason =
@@ -42,6 +46,7 @@ export type ReportReason =
 export interface Profile {
   id: string;
   full_name: string;
+  username: string | null;
   phone: string | null;
   email: string | null;
   avatar_url: string | null;
@@ -70,10 +75,15 @@ export interface Profile {
 // "profiles"). "cpf" só deve ser buscado no próprio /conta/verificacao
 // (o dono vendo o que enviou) ou nunca exposto ao cliente em telas de
 // terceiros — a tela de admin usa as fotos, não o CPF em si.
+export type DocumentType = "fisico" | "digital";
+
 export interface ProfileKyc {
   profile_id: string;
   cpf: string | null;
   in_whatsapp_group: boolean;
+  // "fisico" = documento em frente + verso; "digital" = documento único
+  // (ex.: CNH Digital em PDF), guardado em document_front_path, sem verso.
+  document_type: DocumentType;
   document_front_path: string | null;
   document_back_path: string | null;
   selfie_path: string | null;

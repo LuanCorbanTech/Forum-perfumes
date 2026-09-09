@@ -60,6 +60,7 @@ export default async function AdminCadastrosPage() {
   const candidates = await Promise.all(
     (profiles ?? []).map(async (profile) => {
       const kyc = kycByProfile.get(profile.id) ?? null;
+      const documentType = kyc?.document_type ?? "fisico";
       const [frontUrl, backUrl, selfieUrl] = await Promise.all([
         signedUrl(supabase, kyc?.document_front_path ?? null),
         signedUrl(supabase, kyc?.document_back_path ?? null),
@@ -67,10 +68,15 @@ export default async function AdminCadastrosPage() {
       ]);
       return {
         profile,
+        documentType,
         frontUrl,
         backUrl,
         selfieUrl,
-        submitted: !!(kyc?.document_front_path && kyc?.document_back_path && kyc?.selfie_path),
+        submitted: !!(
+          kyc?.document_front_path &&
+          kyc?.selfie_path &&
+          (documentType === "digital" || kyc?.document_back_path)
+        ),
       };
     })
   );
@@ -90,7 +96,7 @@ export default async function AdminCadastrosPage() {
 
       {candidates.length > 0 ? (
         <ul className="grid gap-4">
-          {candidates.map(({ profile, submitted, frontUrl, backUrl, selfieUrl }) => (
+          {candidates.map(({ profile, submitted, documentType, frontUrl, backUrl, selfieUrl }) => (
             <li key={profile.id} className="rounded-card border border-sand-300 bg-white p-5">
               <div className="flex flex-wrap items-center justify-between gap-2.5">
                 <div className="flex flex-wrap items-baseline gap-2 text-[13px] font-normal text-[#8A8F98]">
@@ -117,14 +123,17 @@ export default async function AdminCadastrosPage() {
               </div>
 
               {submitted ? (
-                <div className="mt-4 grid grid-cols-3 gap-3">
-                  <PhotoSlot label="Documento (frente)" url={frontUrl} />
-                  <PhotoSlot label="Documento (verso)" url={backUrl} />
+                <div className={`mt-4 grid gap-3 ${documentType === "digital" ? "grid-cols-2" : "grid-cols-3"}`}>
+                  <PhotoSlot
+                    label={documentType === "digital" ? "Documento (PDF/único)" : "Documento (frente)"}
+                    url={frontUrl}
+                  />
+                  {documentType === "fisico" && <PhotoSlot label="Documento (verso)" url={backUrl} />}
                   <PhotoSlot label="Selfie" url={selfieUrl} />
                 </div>
               ) : (
                 <p className="mt-4 text-[13px] font-normal italic text-[#8A8F98]">
-                  Ainda não enviou as fotos de verificação (documento frente/verso + selfie).
+                  Ainda não enviou o(s) documento(s) e a selfie de verificação.
                 </p>
               )}
 
@@ -151,13 +160,27 @@ function Counter({ value, label }: { value: number; label: string }) {
 }
 
 function PhotoSlot({ label, url }: { label: string; url: string | null }) {
+  const isPdf = !!url && url.split("?")[0].toLowerCase().endsWith(".pdf");
+
   return (
     <div>
       <p className="mb-1.5 text-[9.5px] font-medium uppercase tracking-[0.02em] text-[#8A8F98]">{label}</p>
       {url ? (
-        <a href={url} target="_blank" rel="noreferrer">
-          <img src={url} alt={label} className="h-28 w-full rounded-lg border border-sand-300 object-cover" />
-        </a>
+        isPdf ? (
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="flex h-28 w-full flex-col items-center justify-center gap-1 rounded-lg border border-sand-300 bg-sand text-[11px] font-medium text-[#5B6470] hover:border-dourado hover:text-dourado-dark"
+          >
+            <span className="text-xl">📄</span>
+            Abrir PDF
+          </a>
+        ) : (
+          <a href={url} target="_blank" rel="noreferrer">
+            <img src={url} alt={label} className="h-28 w-full rounded-lg border border-sand-300 object-cover" />
+          </a>
+        )
       ) : (
         <div className="flex h-28 w-full items-center justify-center rounded-lg border border-dashed border-sand-400 text-[10px] text-[#8A8F98]">
           Sem foto

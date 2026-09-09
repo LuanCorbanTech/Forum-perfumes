@@ -5,125 +5,287 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-type Method = "phone" | "email";
-type Step = "identify" | "verify";
+type View = "login" | "cadastro" | "esqueci-senha";
 
-// Login/cadastro unificado por OTP (telefone via SMS ou e-mail via código).
-// No primeiro acesso, o trigger `handle_new_user` cria o profile
-// automaticamente usando o full_name enviado em options.data.
+// Login/cadastro por e-mail (ou nome de usuário) + senha (migration_009).
+// Antes disso o site usava código por e-mail/SMS (OTP) — trocado porque
+// gerava fricção (limite de e-mails do Supabase, gente perdendo o código
+// etc). No primeiro acesso o trigger `handle_new_user` já cria o profile
+// automaticamente usando os metadados enviados em options.data.
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
 
-  const [method, setMethod] = useState<Method>("phone");
-  const [step, setStep] = useState<Step>("identify");
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const isCadastroParam = searchParams.get("modo") === "cadastro";
+  const [view, setView] = useState<View>(isCadastroParam ? "cadastro" : "login");
 
-  // Campos extras, só usados na tela de cadastro (ver isCadastro abaixo).
-  // CPF e participação no grupo vão para a tabela protegida "profile_kyc"
-  // (migration_006), não para a leitura pública de "profiles".
+  // Campos de login.
+  const [loginId, setLoginId] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+
+  // Campos de cadastro.
+  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [cpf, setCpf] = useState("");
   const [inWhatsappGroup, setInWhatsappGroup] = useState<"" | "sim" | "nao">("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  // O cadastro usa exatamente o mesmo fluxo de OTP do login (no primeiro
-  // acesso o trigger `handle_new_user` já cria o profile) — só o texto muda
-  // conforme a pessoa chegou por "Entrar" ou por "Cadastrar" no header.
-  const isCadastro = searchParams.get("modo") === "cadastro";
+  // "Esqueci minha senha".
+  const [forgotId, setForgotId] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
 
-  // No cadastro não existe mais a escolha telefone/e-mail: o campo "Telefone
-  // (WhatsApp)" é só um dado de contato, e a verificação sempre acontece por
-  // e-mail. No login ("Entrar"), continua igual: a pessoa escolhe telefone
-  // ou e-mail (variável "method" acima).
-  const verifyMethod: Method = isCadastro ? "email" : method;
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cadastroFeito, setCadastroFeito] = useState(false);
 
-  async function handleSendCode(e: React.FormEvent) {
+  async function resolveEmail(loginInput: string): Promise<string | null> {
+    const { data, error: rpcError } = await supabase.rpc("resolve_login_email", {
+      p_login: loginInput,
+    });
+    if (rpcError) return null;
+    return (data as string | null) ?? null;
+  }
+
+  function friendlyAuthError(message: string): string {
+    if (/invalid login credentials/i.test(message)) {
+      return "E-mail/usuário ou senha inválidos.";
+    }
+    if (/email not confirmed/i.test(message)) {
+      return "Você ainda não confirmou seu e-mail. Confira sua caixa de entrada (e o spam) e clique no link de confirmação.";
+    }
+    if (/user already registered/i.test(message)) {
+      return "Já existe uma conta com esse e-mail. Tenta entrar em vez de cadastrar.";
+    }
+    return message;
+  }
+
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    if (isCadastro) {
-      if (!isValidCPF(cpf)) {
-        setError("Digite um CPF válido.");
-        return;
-      }
-      if (inWhatsappGroup === "") {
-        setError('Selecione se você já participa do grupo de WhatsApp.');
-        return;
-      }
-      if (!phone.trim()) {
-        setError("Digite seu telefone (WhatsApp).");
-        return;
-      }
-      if (!isValidEmail(email)) {
-        setError("Digite um e-mail válido.");
-        return;
-      }
+    if (!loginId.trim() || !loginPassword) {
+      setError("Preenche o e-mail (ou usuário) e a senha.");
+      return;
     }
 
     setLoading(true);
+    const resolvedEmail = await resolveEmail(loginId);
+    if (!resolvedEmail) {
+      setLoading(false);
+      setError("E-mail/usuário ou senha inválidos.");
+      return;
+    }
 
-    const cadastroData = isCadastro
-      ? {
-          cpf: cpf.replace(/\D/g, ""),
-          in_whatsapp_group: inWhatsappGroup === "sim",
-          // No cadastro a verificação é sempre por e-mail — o telefone
-          // (WhatsApp) é só um dado de contato, guardado via metadata.
-          phone: normalizePhone(phone),
-        }
-      : {};
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: resolvedEmail,
+      password: loginPassword,
+    });
+
+    setLoading(false);
+    if (signInError) {
+      setError(friendlyAuthError(signInError.message));
+      return;
+    }
 
     const next = searchParams.get("next") ?? "/";
-    const options =
-      verifyMethod === "phone"
-        ? { data: { full_name: fullName || undefined, ...cadastroData } }
-        : {
-            data: { full_name: fullName || undefined, ...cadastroData },
-            // Sem isso, o Supabase usa a "Site URL" padrão como destino do
-            // link do e-mail e ignora nossa rota /auth/callback — o clique
-            // no link volta pro site, mas sem sessão criada.
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-          };
-    const { error } =
-      verifyMethod === "phone"
-        ? await supabase.auth.signInWithOtp({ phone: normalizePhone(phone), options })
-        : await supabase.auth.signInWithOtp({ email, options });
-
-    setLoading(false);
-    if (error) {
-      setError(error.message);
-      return;
-    }
-    setStep("verify");
-  }
-
-  async function handleVerifyCode(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    const { error } =
-      verifyMethod === "phone"
-        ? await supabase.auth.verifyOtp({ phone: normalizePhone(phone), token: code, type: "sms" })
-        : await supabase.auth.verifyOtp({ email, token: code, type: "email" });
-
-    setLoading(false);
-    if (error) {
-      setError(error.message);
-      return;
-    }
-
-    // Quem acabou de se cadastrar precisa passar pela verificação de
-    // identidade (documento + selfie) antes de qualquer outra coisa —
-    // por isso o cadastro sempre vai para /conta/verificacao, ignorando
-    // o "next" (que só se aplica ao login normal).
-    router.push(isCadastro ? "/conta/verificacao" : searchParams.get("next") ?? "/");
+    router.push(next);
     router.refresh();
   }
+
+  async function handleCadastro(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    if (!fullName.trim()) {
+      setError("Digite seu nome completo.");
+      return;
+    }
+    if (username.trim() && !isValidUsername(username)) {
+      setError("Nome de usuário só pode ter letras, números e _ (mínimo 3 caracteres).");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError("Digite um e-mail válido.");
+      return;
+    }
+    if (!phone.trim()) {
+      setError("Digite seu telefone (WhatsApp).");
+      return;
+    }
+    if (!isValidCPF(cpf)) {
+      setError("Digite um CPF válido.");
+      return;
+    }
+    if (inWhatsappGroup === "") {
+      setError("Selecione se você já participa do grupo de WhatsApp.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("A senha precisa ter pelo menos 8 caracteres.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("As senhas não são iguais.");
+      return;
+    }
+
+    setLoading(true);
+
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        data: {
+          full_name: fullName || undefined,
+          username: username.trim() || undefined,
+          phone: normalizePhone(phone),
+          cpf: cpf.replace(/\D/g, ""),
+          in_whatsapp_group: inWhatsappGroup === "sim",
+        },
+        // Sem isso, o Supabase usa a "Site URL" padrão como destino do
+        // link do e-mail e ignora nossa rota /auth/callback.
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/conta/verificacao")}`,
+      },
+    });
+
+    setLoading(false);
+    if (signUpError) {
+      setError(friendlyAuthError(signUpError.message));
+      return;
+    }
+
+    // Se a confirmação de e-mail estiver desativada no projeto, o
+    // signUp já devolve uma sessão pronta — nesse caso pode entrar direto.
+    if (data.session) {
+      router.push("/conta/verificacao");
+      router.refresh();
+      return;
+    }
+
+    setCadastroFeito(true);
+  }
+
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    if (!forgotId.trim()) {
+      setError("Digite seu e-mail (ou usuário).");
+      return;
+    }
+
+    setLoading(true);
+    const resolvedEmail = await resolveEmail(forgotId);
+    if (!resolvedEmail) {
+      setLoading(false);
+      // Não revela se o e-mail/usuário existe ou não, por segurança.
+      setForgotSent(true);
+      return;
+    }
+
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(resolvedEmail, {
+      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/redefinir-senha")}`,
+    });
+
+    setLoading(false);
+    if (resetError) {
+      setError(friendlyAuthError(resetError.message));
+      return;
+    }
+    setForgotSent(true);
+  }
+
+  if (cadastroFeito) {
+    return (
+      <div className="mx-auto max-w-[420px]">
+        <div className="rounded-card border border-sand-300 bg-white p-[26px] text-center">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.02em] text-dourado">Cadastro</p>
+          <h1 className="mb-3 font-serif text-3xl font-medium leading-none text-obsidian-900">
+            Confirme seu e-mail
+          </h1>
+          <p className="text-sm font-normal leading-relaxed text-[#5B6470]">
+            Mandamos um link de confirmação para <strong>{email}</strong>. Abre o e-mail e clica no
+            link — assim que confirmar, você já pode enviar seu documento e selfie para verificação.
+          </p>
+          <Link
+            href="/login"
+            className="mt-5 inline-block border-b border-dourado-tint-border text-[13px] font-medium text-dourado-dark"
+          >
+            Voltar pro login
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "esqueci-senha") {
+    return (
+      <div className="mx-auto max-w-[420px]">
+        <p className="mb-3 text-center text-[10px] font-semibold uppercase tracking-[0.02em] text-dourado">
+          Acesso
+        </p>
+        <h1 className="mb-2 text-center font-serif text-4xl font-medium leading-none text-obsidian-900">
+          Esqueci minha senha
+        </h1>
+        <p className="mb-7 text-center text-sm font-normal text-[#5B6470]">
+          Digite seu e-mail ou nome de usuário — mandamos um link pra você escolher uma senha nova.
+        </p>
+
+        <div className="rounded-card border border-sand-300 bg-white p-[26px]">
+          {forgotSent ? (
+            <p className="text-center text-sm font-normal leading-relaxed text-[#3C434C]">
+              Se esse e-mail/usuário existir na nossa base, um link de redefinição foi enviado.
+              Confere sua caixa de entrada (e o spam).
+            </p>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div>
+                <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                  E-mail ou nome de usuário
+                </label>
+                <input
+                  value={forgotId}
+                  onChange={(e) => setForgotId(e.target.value)}
+                  placeholder="voce@email.com ou seu_usuario"
+                  required
+                  className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+                />
+              </div>
+              {error && (
+                <p className="rounded-lg border border-crimson-tint-border bg-crimson-tint p-2.5 text-[12.5px] text-crimson">
+                  {error}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-lg bg-obsidian-900 py-3.5 text-[11.5px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:opacity-50 hover:bg-dourado hover:text-obsidian-900"
+              >
+                {loading ? "Enviando..." : "Enviar link"}
+              </button>
+            </form>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setView("login");
+              setError(null);
+              setForgotSent(false);
+            }}
+            className="mt-4 w-full text-center text-[12.5px] font-normal text-[#8A8F98] transition-colors hover:text-obsidian-900"
+          >
+            Voltar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const isCadastro = view === "cadastro";
 
   return (
     <div className="mx-auto max-w-[420px]">
@@ -135,21 +297,29 @@ export function LoginForm() {
       </h1>
       <p className="mb-2 text-center text-sm font-normal text-[#5B6470]">
         {isCadastro
-          ? "Enviaremos um código de confirmação para o seu e-mail."
-          : "Use seu telefone ou e-mail. Enviaremos um código de confirmação."}
+          ? "Preenche seus dados e escolhe uma senha."
+          : "Use seu e-mail (ou nome de usuário) e sua senha."}
       </p>
       <p className="mb-7 text-center text-[12.5px] font-normal text-[#8A8F98]">
         {isCadastro ? (
           <>
             Já tem conta?{" "}
-            <Link href="/login" className="border-b border-dourado-tint-border text-dourado-dark">
+            <Link
+              href="/login"
+              onClick={() => setView("login")}
+              className="border-b border-dourado-tint-border text-dourado-dark"
+            >
               Entrar
             </Link>
           </>
         ) : (
           <>
             Ainda não tem conta?{" "}
-            <Link href="/login?modo=cadastro" className="border-b border-dourado-tint-border text-dourado-dark">
+            <Link
+              href="/login?modo=cadastro"
+              onClick={() => setView("cadastro")}
+              className="border-b border-dourado-tint-border text-dourado-dark"
+            >
               Cadastre-se
             </Link>
           </>
@@ -157,213 +327,200 @@ export function LoginForm() {
       </p>
 
       <div className="rounded-card border border-sand-300 bg-white p-[26px]">
-        {step === "identify" && (
-          <>
-            {!isCadastro && (
-              <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg border border-sand-300 p-1">
-                <button
-                  type="button"
-                  onClick={() => setMethod("phone")}
-                  className={`rounded-md py-[9px] text-[13px] font-medium transition-colors ${
-                    method === "phone" ? "bg-obsidian-900 text-white" : "text-[#5B6470]"
-                  }`}
-                >
-                  Telefone
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMethod("email")}
-                  className={`rounded-md py-[9px] text-[13px] font-medium transition-colors ${
-                    method === "email" ? "bg-obsidian-900 text-white" : "text-[#5B6470]"
-                  }`}
-                >
-                  E-mail
-                </button>
-              </div>
-            )}
+        {isCadastro ? (
+          <form onSubmit={handleCadastro} className="space-y-4">
+            <div>
+              <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                Nome completo
+              </label>
+              <input
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Como quer ser identificado no Cheiro Novo"
+                required
+                className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+              />
+            </div>
 
-            <form onSubmit={handleSendCode} className="space-y-4">
-              <div>
-                <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
-                  Nome completo{" "}
-                  <span className="font-normal normal-case tracking-normal text-[#B4AEA3]">(primeiro acesso)</span>
-                </label>
-                <input
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Como quer ser identificado no Cheiro Novo"
-                  className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
-                />
-              </div>
+            <div>
+              <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                Nome de usuário{" "}
+                <span className="font-normal normal-case tracking-normal text-[#B4AEA3]">(opcional)</span>
+              </label>
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value.replace(/\s/g, ""))}
+                placeholder="ex: joao_perfumes"
+                className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+              />
+            </div>
 
-              {isCadastro ? (
-                <>
-                  <div>
-                    <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
-                      CPF
-                    </label>
-                    <input
-                      value={cpf}
-                      onChange={(e) => setCpf(formatCPF(e.target.value))}
-                      placeholder="000.000.000-00"
-                      inputMode="numeric"
-                      maxLength={14}
-                      required
-                      className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
-                    />
-                  </div>
+            <div>
+              <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                E-mail
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="voce@email.com"
+                required
+                className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+              />
+            </div>
 
-                  <div>
-                    <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
-                      Telefone (WhatsApp)
-                    </label>
-                    <input
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+55 11 99999-8888"
-                      required
-                      className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
-                    />
-                  </div>
+            <div>
+              <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                CPF
+              </label>
+              <input
+                value={cpf}
+                onChange={(e) => setCpf(formatCPF(e.target.value))}
+                placeholder="000.000.000-00"
+                inputMode="numeric"
+                maxLength={14}
+                required
+                className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+              />
+            </div>
 
-                  <div>
-                    <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
-                      E-mail
-                    </label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="voce@email.com"
-                      required
-                      className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
-                    />
-                  </div>
+            <div>
+              <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                Telefone (WhatsApp)
+              </label>
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+55 11 99999-8888"
+                required
+                className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+              />
+            </div>
 
-                  <div>
-                    <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
-                      Já participa do grupo de WhatsApp?
-                    </label>
-                    <select
-                      value={inWhatsappGroup}
-                      onChange={(e) => setInWhatsappGroup(e.target.value as "" | "sim" | "nao")}
-                      required
-                      className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
-                    >
-                      <option value="" disabled>
-                        Selecione uma opção
-                      </option>
-                      <option value="sim">Sim, já participo</option>
-                      <option value="nao">Não, ainda não</option>
-                    </select>
-                  </div>
-                </>
-              ) : method === "phone" ? (
-                <div>
-                  <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
-                    Telefone (com DDD)
-                  </label>
-                  <input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+55 11 99999-8888"
-                    required
-                    className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
-                  />
-                </div>
-              ) : (
-                <div>
-                  <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
-                    E-mail
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="voce@email.com"
-                    required
-                    className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
-                  />
-                </div>
-              )}
-
-              {error && (
-                <p className="rounded-lg border border-crimson-tint-border bg-crimson-tint p-2.5 text-[12.5px] text-crimson">
-                  {error}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-lg bg-obsidian-900 py-3.5 text-[11.5px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:opacity-50 hover:bg-dourado hover:text-obsidian-900"
+            <div>
+              <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                Já participa do grupo de WhatsApp?
+              </label>
+              <select
+                value={inWhatsappGroup}
+                onChange={(e) => setInWhatsappGroup(e.target.value as "" | "sim" | "nao")}
+                required
+                className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
               >
-                {loading ? "Enviando..." : "Enviar código"}
-              </button>
+                <option value="" disabled>
+                  Selecione uma opção
+                </option>
+                <option value="sim">Sim, já participo</option>
+                <option value="nao">Não, ainda não</option>
+              </select>
+            </div>
 
-              <p className="text-center text-[11.5px] font-normal leading-relaxed text-[#8A8F98]">
-                Ao continuar, você concorda com os{" "}
-                <a
-                  href="/termos"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="border-b border-dourado-tint-border text-dourado-dark"
-                >
-                  termos de uso
-                </a>{" "}
-                e as{" "}
-                <a
-                  href="/regras"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="border-b border-dourado-tint-border text-dourado-dark"
-                >
-                  regras do fórum
-                </a>
-                .
-              </p>
-            </form>
-          </>
-        )}
+            <div>
+              <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                Senha
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 8 caracteres"
+                required
+                className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+              />
+            </div>
 
-        {step === "verify" && (
-          <form onSubmit={handleVerifyCode} className="space-y-3.5">
-            <p className="text-sm font-normal leading-relaxed text-[#3C434C]">
-              Enviamos {verifyMethod === "phone" ? "um código" : "um e-mail de confirmação"} para{" "}
-              {verifyMethod === "phone" ? normalizePhone(phone) : email}.
-            </p>
-            {verifyMethod === "email" && (
-              <p className="rounded-lg border border-dourado-tint-border bg-dourado-tint p-3 text-[12.5px] font-normal leading-relaxed text-[#5B6470]">
-                Mais fácil: abra o e-mail e clique no link &ldquo;Entrar&rdquo;, isso já faz login
-                direto, sem precisar digitar nada aqui. O campo abaixo só funciona se o código
-                aparecer no corpo do e-mail.
-              </p>
-            )}
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="Código de 6 dígitos"
-              required
-              className="h-[52px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[17px] font-semibold tracking-[0.02em] text-obsidian-900 placeholder-[#A0A5AC] placeholder:text-[14px] placeholder:font-normal focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
-            />
+            <div>
+              <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                Confirmar senha
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repete a senha"
+                required
+                className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+              />
+            </div>
+
             {error && (
               <p className="rounded-lg border border-crimson-tint-border bg-crimson-tint p-2.5 text-[12.5px] text-crimson">
                 {error}
               </p>
             )}
+
             <button
               type="submit"
               disabled={loading}
               className="w-full rounded-lg bg-obsidian-900 py-3.5 text-[11.5px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:opacity-50 hover:bg-dourado hover:text-obsidian-900"
             >
-              {loading ? "Verificando..." : "Confirmar código"}
+              {loading ? "Criando conta..." : "Criar conta"}
             </button>
+
+            <p className="text-center text-[11.5px] font-normal leading-relaxed text-[#8A8F98]">
+              Ao continuar, você concorda com os{" "}
+              <a href="/termos" target="_blank" rel="noreferrer" className="border-b border-dourado-tint-border text-dourado-dark">
+                termos de uso
+              </a>{" "}
+              e as{" "}
+              <a href="/regras" target="_blank" rel="noreferrer" className="border-b border-dourado-tint-border text-dourado-dark">
+                regras do fórum
+              </a>
+              .
+            </p>
+          </form>
+        ) : (
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                E-mail ou nome de usuário
+              </label>
+              <input
+                value={loginId}
+                onChange={(e) => setLoginId(e.target.value)}
+                placeholder="voce@email.com ou seu_usuario"
+                required
+                className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+                Senha
+              </label>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="Sua senha"
+                required
+                className="h-[46px] w-full rounded-lg border border-sand-400 bg-white px-3.5 text-[14.5px] text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
+              />
+            </div>
+
+            {error && (
+              <p className="rounded-lg border border-crimson-tint-border bg-crimson-tint p-2.5 text-[12.5px] text-crimson">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-lg bg-obsidian-900 py-3.5 text-[11.5px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:opacity-50 hover:bg-dourado hover:text-obsidian-900"
+            >
+              {loading ? "Entrando..." : "Entrar"}
+            </button>
+
             <button
               type="button"
-              onClick={() => setStep("identify")}
+              onClick={() => {
+                setView("esqueci-senha");
+                setError(null);
+              }}
               className="w-full text-center text-[12.5px] font-normal text-[#8A8F98] transition-colors hover:text-obsidian-900"
             >
-              Voltar
+              Esqueci minha senha
             </button>
           </form>
         )}
@@ -389,6 +546,10 @@ function formatCPF(raw: string): string {
 
 function isValidEmail(raw: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.trim());
+}
+
+function isValidUsername(raw: string): boolean {
+  return /^[a-zA-Z0-9_]{3,24}$/.test(raw.trim());
 }
 
 function isValidCPF(raw: string): boolean {

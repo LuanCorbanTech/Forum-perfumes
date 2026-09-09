@@ -1,5 +1,11 @@
 # Aviso por e-mail de aprovação/recusa de cadastro (Brevo)
 
+> **Já tinha publicado esta função antes?** O `index.ts` foi atualizado
+> pra deixar o e-mail com a cara do site (logo + botão) — repita o passo
+> 2 abaixo (Deploy) colando o conteúdo novo por cima do antigo. É seguro
+> fazer isso quantas vezes quiser, não perde nenhuma configuração salva
+> em `/admin/configuracoes`.
+
 A chave da Brevo e o e-mail remetente **não ficam mais em variável de
 ambiente/linha de comando** — desde a migração 008, você configura os
 dois direto pelo site, na aba **Configurações (APIs)** dentro do painel
@@ -49,6 +55,13 @@ Depois de publicada a função (passo 2), entre no seu site, vá em
   Configurações > Remetentes e IP > Remetentes).
 - **Nome do remetente** — o que aparece pra quem recebe o e-mail (ex.:
   "Cheiro Novo").
+- **URL do logo** (opcional) — endereço público de uma imagem (ex.:
+  `https://seusite.com/logo.png`) pra aparecer no topo do e-mail. Se
+  deixar em branco, o e-mail mostra só o nome do remetente no lugar do
+  logo — nunca fica quebrado.
+- **URL do site** (opcional) — endereço completo do seu site, usado no
+  botão do e-mail ("Ir para o site" / "Reenviar documento"). Se deixar em
+  branco, o e-mail simplesmente não mostra o botão.
 
 Pronto. A partir daqui, toda vez que você aprovar ou recusar um cadastro
 em `/admin/cadastros`, a pessoa recebe um e-mail automático avisando (e,

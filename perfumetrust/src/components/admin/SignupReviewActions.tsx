@@ -73,7 +73,7 @@ export function SignupReviewActions({ userId, canApprove }: { userId: string; ca
         <button
           onClick={() => handleReview(true)}
           disabled={loading || !canApprove}
-          title={!canApprove ? "Ainda não enviou as 3 fotos (documento frente/verso + selfie)" : undefined}
+          title={!canApprove ? "Ainda não enviou o(s) documento(s) e a selfie" : undefined}
           className="rounded-lg bg-verde px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:opacity-50 hover:bg-[#116430]"
         >
           Aprovar cadastro

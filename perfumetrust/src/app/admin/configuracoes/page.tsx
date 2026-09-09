@@ -26,6 +26,8 @@ export default async function AdminConfiguracoesPage() {
         initialApiKey={byKey.get(ADMIN_SETTING_KEYS.BREVO_API_KEY) ?? ""}
         initialSenderEmail={byKey.get(ADMIN_SETTING_KEYS.BREVO_SENDER_EMAIL) ?? ""}
         initialSenderName={byKey.get(ADMIN_SETTING_KEYS.BREVO_SENDER_NAME) ?? ""}
+        initialLogoUrl={byKey.get(ADMIN_SETTING_KEYS.EMAIL_LOGO_URL) ?? ""}
+        initialSiteUrl={byKey.get(ADMIN_SETTING_KEYS.EMAIL_SITE_URL) ?? ""}
       />
     </div>
   );

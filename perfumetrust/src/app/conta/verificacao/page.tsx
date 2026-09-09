@@ -49,7 +49,12 @@ export default async function VerificacaoPage() {
     signedUrl(supabase, kyc?.selfie_path ?? null),
   ]);
 
-  const alreadySubmitted = !!(kyc?.document_front_path && kyc?.document_back_path && kyc?.selfie_path);
+  const documentType = kyc?.document_type ?? "fisico";
+  const alreadySubmitted = !!(
+    kyc?.document_front_path &&
+    kyc?.selfie_path &&
+    (documentType === "digital" || kyc?.document_back_path)
+  );
 
   return (
     <div className="mx-auto max-w-xl space-y-7">
@@ -61,10 +66,11 @@ export default async function VerificacaoPage() {
           Confirme quem você é
         </h1>
         <p className="mt-3 text-[14.5px] font-normal leading-relaxed text-[#5B6470]">
-          Pra liberar seu cadastro (registrar transação, avaliar e denunciar), pedimos uma foto do
-          seu documento (frente e verso) e uma selfie. Um moderador confere manualmente e libera seu
-          acesso — não usamos reconhecimento facial automático nem guardamos isso em nenhum lugar
-          público: só você e um admin conseguem ver essas fotos.
+          Pra liberar seu cadastro (registrar transação, avaliar e denunciar), pedimos seu documento
+          (frente e verso, ou um PDF único como a CNH Digital ou o RG Digital) e uma selfie. Um
+          moderador confere manualmente e libera seu acesso — não usamos reconhecimento facial
+          automático nem guardamos isso em nenhum lugar público: só você e um admin conseguem ver
+          esses arquivos.
         </p>
       </div>
 
@@ -104,6 +110,7 @@ export default async function VerificacaoPage() {
           hasFront: !!kyc?.document_front_path,
           hasBack: !!kyc?.document_back_path,
           hasSelfie: !!kyc?.selfie_path,
+          documentType,
         }}
       />
     </div>

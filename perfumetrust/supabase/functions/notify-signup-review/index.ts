@@ -8,14 +8,16 @@
 // ninguém fica travado por causa disso.
 //
 // A chave da Brevo e o remetente NÃO ficam mais em variável de ambiente:
-// desde a migration_008, o admin configura os três valores abaixo direto
-// pela tela /admin/configuracoes (aba "APIs") do site, e ficam guardados
-// na tabela admin_settings (só admin lê/escreve lá, via RLS). Esta função
-// lê o valor mais recente a cada chamada, então trocar a chave pela tela
-// já vale na hora, sem precisar reimplantar (redeploy) nada:
+// desde a migration_008, o admin configura os valores abaixo direto pela
+// tela /admin/configuracoes (aba "APIs") do site, e ficam guardados na
+// tabela admin_settings (só admin lê/escreve lá, via RLS). Esta função lê
+// o valor mais recente a cada chamada, então trocar qualquer um deles
+// pela tela já vale na hora, sem precisar reimplantar (redeploy) nada:
 //   brevo_api_key
 //   brevo_sender_email
 //   brevo_sender_name
+//   email_logo_url    (opcional — logo mostrado no topo do e-mail)
+//   email_site_url    (opcional — usado no botão "Ir para o site")
 //
 // Como fallback (só pra quem preferir configurar por variável de
 // ambiente em vez da tela), se uma dessas chaves não estiver na tabela,
@@ -54,12 +56,20 @@ Deno.serve(async (req: Request) => {
     const { data: settingsRows } = await admin
       .from("admin_settings")
       .select("key, value")
-      .in("key", ["brevo_api_key", "brevo_sender_email", "brevo_sender_name"]);
+      .in("key", [
+        "brevo_api_key",
+        "brevo_sender_email",
+        "brevo_sender_name",
+        "email_logo_url",
+        "email_site_url",
+      ]);
     const settings = new Map((settingsRows ?? []).map((r: { key: string; value: string | null }) => [r.key, r.value]));
 
     const brevoApiKey = settings.get("brevo_api_key") || Deno.env.get("BREVO_API_KEY");
     const senderEmail = settings.get("brevo_sender_email") || Deno.env.get("BREVO_SENDER_EMAIL");
     const senderName = settings.get("brevo_sender_name") || Deno.env.get("BREVO_SENDER_NAME") || "Cheiro Novo";
+    const logoUrl = settings.get("email_logo_url") || Deno.env.get("EMAIL_LOGO_URL") || "";
+    const siteUrl = (settings.get("email_site_url") || Deno.env.get("EMAIL_SITE_URL") || "").replace(/\/$/, "");
 
     if (!brevoApiKey || !senderEmail) {
       // Ainda não configurou a Brevo em /admin/configuracoes — não trava
@@ -84,20 +94,31 @@ Deno.serve(async (req: Request) => {
     }
 
     const firstName = (profile.full_name ?? "").trim().split(" ")[0] || "";
-    const greeting = firstName ? `Oi, ${firstName}!` : "Oi!";
+    const greeting = firstName ? `Oi, ${escapeHtml(firstName)}!` : "Oi!";
 
     const subject = approved
       ? "Seu cadastro no Cheiro Novo foi aprovado"
       : "Sua verificação no Cheiro Novo precisa ser reenviada";
 
-    const htmlContent = approved
-      ? `<p>${greeting}</p>
-         <p>Boa notícia: seu documento e sua selfie foram conferidos, e o seu cadastro no Cheiro Novo foi <strong>aprovado</strong>.</p>
-         <p>Agora você já pode registrar transações, avaliar vendedores e denunciar problemas normalmente no site.</p>`
-      : `<p>${greeting}</p>
-         <p>Conferimos as fotos que você enviou e, por enquanto, não deu para aprovar seu cadastro no Cheiro Novo.</p>
-         ${notes ? `<p><strong>Motivo:</strong> ${escapeHtml(String(notes))}</p>` : ""}
-         <p>Entre no site e acesse "Verificação de identidade" para reenviar o documento e a selfie.</p>`;
+    const bodyHtml = approved
+      ? `<p style="margin:0 0 16px;">${greeting}</p>
+         <p style="margin:0 0 16px;">Boa notícia: seu documento e sua selfie foram conferidos, e o seu cadastro no Cheiro Novo foi <strong>aprovado</strong>.</p>
+         <p style="margin:0;">Agora você já pode registrar transações, avaliar vendedores e denunciar problemas normalmente no site.</p>`
+      : `<p style="margin:0 0 16px;">${greeting}</p>
+         <p style="margin:0 0 16px;">Conferimos os arquivos que você enviou e, por enquanto, não deu para aprovar seu cadastro no Cheiro Novo.</p>
+         ${notes ? `<p style="margin:0 0 16px;"><strong>Motivo:</strong> ${escapeHtml(String(notes))}</p>` : ""}
+         <p style="margin:0;">Entre no site e acesse "Verificação de identidade" para reenviar o documento e a selfie.</p>`;
+
+    const htmlContent = buildEmailHtml({
+      title: approved ? "Cadastro aprovado" : "Verificação pendente",
+      bodyHtml,
+      ctaLabel: approved ? "Ir para o site" : "Reenviar documento",
+      ctaPath: approved ? "/" : "/conta/verificacao",
+      logoUrl,
+      siteUrl,
+      senderName,
+      accent: approved ? "#c59b27" : "#b42318",
+    });
 
     const brevoResponse = await fetch(BREVO_API_URL, {
       method: "POST",
@@ -137,4 +158,83 @@ Deno.serve(async (req: Request) => {
 function escapeHtml(s: string): string {
   const map: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
   return s.replace(/[&<>"']/g, (c) => map[c] ?? c);
+}
+
+// Monta o e-mail com a cara do site: cabeçalho escuro com o logo (se
+// configurado em /admin/configuracoes), um cartão claro com o conteúdo e um
+// botão levando de volta pro site (se a URL do site estiver configurada).
+// Tudo com CSS inline propositalmente — é o único jeito que funciona de
+// forma consistente nos clientes de e-mail (Gmail, Outlook etc.), que
+// ignoram <style> no <head> na maioria das vezes.
+function buildEmailHtml({
+  title,
+  bodyHtml,
+  ctaLabel,
+  ctaPath,
+  logoUrl,
+  siteUrl,
+  senderName,
+  accent,
+}: {
+  title: string;
+  bodyHtml: string;
+  ctaLabel: string;
+  ctaPath: string;
+  logoUrl: string;
+  siteUrl: string;
+  senderName: string;
+  accent: string;
+}): string {
+  const ctaUrl = siteUrl ? `${siteUrl}${ctaPath}` : "";
+
+  const logoBlock = logoUrl
+    ? `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(senderName)}" height="36" style="height:36px;width:auto;display:block;margin:0 auto;" />`
+    : `<span style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:600;color:#f4e9cf;letter-spacing:0.02em;">${escapeHtml(senderName)}</span>`;
+
+  const ctaBlock = ctaUrl
+    ? `<tr>
+         <td align="center" style="padding:28px 32px 8px;">
+           <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background:#12161a;color:#ffffff;text-decoration:none;font-size:13px;font-weight:600;letter-spacing:0.02em;text-transform:uppercase;padding:13px 28px;border-radius:8px;">
+             ${escapeHtml(ctaLabel)}
+           </a>
+         </td>
+       </tr>`
+    : "";
+
+  return `<!doctype html>
+<html lang="pt-BR">
+  <body style="margin:0;padding:0;background:#faf8f5;font-family:'Segoe UI',Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf8f5;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e6e1d8;">
+            <tr>
+              <td align="center" style="background:#12161a;padding:26px 24px;">
+                ${logoBlock}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px 32px 8px;">
+                <p style="margin:0 0 18px;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:${accent};">
+                  ${escapeHtml(title)}
+                </p>
+                <div style="font-size:14.5px;line-height:1.6;color:#3c434c;">
+                  ${bodyHtml}
+                </div>
+              </td>
+            </tr>
+            ${ctaBlock}
+            <tr>
+              <td style="padding:24px 32px 28px;">
+                <p style="margin:0;font-size:11.5px;color:#8a8f98;border-top:1px solid #efebe3;padding-top:16px;">
+                  ${escapeHtml(senderName)} — este é um e-mail automático, não precisa responder.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
 }

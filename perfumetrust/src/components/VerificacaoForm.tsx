@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import type { DocumentType } from "@/lib/types";
 
 // Documentos/selfies costumam pesar mais que um avatar comum, então o
 // limite aqui é um pouco mais generoso que o de EditProfileForm.tsx.
@@ -17,6 +18,7 @@ interface ExistingPhotos {
   hasFront: boolean;
   hasBack: boolean;
   hasSelfie: boolean;
+  documentType: DocumentType;
 }
 
 interface VerificacaoFormProps {
@@ -25,39 +27,33 @@ interface VerificacaoFormProps {
   existing: ExistingPhotos;
 }
 
-const SLOT_CONFIG: Record<
-  SlotKey,
-  {
-    label: string;
-    hint: string;
-    capture: "environment" | "user";
-    dbColumn: "document_front_path" | "document_back_path" | "selfie_path";
-  }
-> = {
-  front: {
+// Diferente de "back" e "selfie" (sempre foto), o slot "front" muda de
+// rótulo/dica conforme o tipo de documento escolhido — ver FRONT_LABELS.
+const FRONT_LABELS: Record<DocumentType, { label: string; hint: string }> = {
+  fisico: {
     label: "Documento (frente)",
     hint: "RG, CNH ou outro documento oficial com foto, lado da frente.",
-    capture: "environment",
-    dbColumn: "document_front_path",
   },
-  back: {
-    label: "Documento (verso)",
-    hint: "O mesmo documento, lado de trás.",
-    capture: "environment",
-    dbColumn: "document_back_path",
-  },
-  selfie: {
-    label: "Selfie",
-    hint: "Uma foto sua, de rosto, tirada na hora (abra a câmera frontal).",
-    capture: "user",
-    dbColumn: "selfie_path",
+  digital: {
+    label: "Documento (PDF ou foto única)",
+    hint: 'Ex.: o PDF da "CNH Digital" ou da "Carteira de Identidade Nacional / RG Digital" (app Meu Governo/gov.br), ou outro documento que já vem com tudo numa página só.',
   },
 };
+
+// Um arquivo é considerado "PDF" tanto pelo tipo/nome do File recém
+// selecionado quanto pela extensão da URL assinada de algo já enviado
+// antes (a URL assinada preserva a extensão original antes do "?").
+function looksLikePdf(file: File | null, url: string | null): boolean {
+  if (file) return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  if (!url) return false;
+  return url.split("?")[0].toLowerCase().endsWith(".pdf");
+}
 
 export function VerificacaoForm({ userId, wasRejected, existing }: VerificacaoFormProps) {
   const router = useRouter();
   const supabase = createClient();
 
+  const [documentType, setDocumentType] = useState<DocumentType>(existing.documentType);
   const [files, setFiles] = useState<Record<SlotKey, File | null>>({
     front: null,
     back: null,
@@ -77,18 +73,26 @@ export function VerificacaoForm({ userId, wasRejected, existing }: VerificacaoFo
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  const isDigital = documentType === "digital";
+
   const hasAll = {
     front: !!(files.front || existing.hasFront),
-    back: !!(files.back || existing.hasBack),
+    back: isDigital ? true : !!(files.back || existing.hasBack),
     selfie: !!(files.selfie || existing.hasSelfie),
   };
+
+  function handleDocumentTypeChange(next: DocumentType) {
+    setDocumentType(next);
+    setSuccess(false);
+    setError(null);
+  }
 
   function handleFileChange(slot: SlotKey, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
     setSuccess(false);
     setFieldErrors((prev) => ({ ...prev, [slot]: null }));
     if (file && file.size > MAX_PHOTO_BYTES) {
-      setFieldErrors((prev) => ({ ...prev, [slot]: "A foto precisa ter até 8MB." }));
+      setFieldErrors((prev) => ({ ...prev, [slot]: "O arquivo precisa ter até 8MB." }));
       setFiles((prev) => ({ ...prev, [slot]: null }));
       e.target.value = "";
       return;
@@ -102,34 +106,49 @@ export function VerificacaoForm({ userId, wasRejected, existing }: VerificacaoFo
     setError(null);
     setSuccess(false);
 
-    if (!hasAll.front || !hasAll.back || !hasAll.selfie) {
-      setError("Envie as 3 fotos (documento frente, documento verso e selfie) para continuar.");
+    if (!hasAll.front || !hasAll.selfie || (!isDigital && !hasAll.back)) {
+      setError(
+        isDigital
+          ? "Envie o documento e a selfie para continuar."
+          : "Envie as 3 fotos (documento frente, documento verso e selfie) para continuar."
+      );
       return;
     }
 
     setLoading(true);
     try {
-      const updates: Record<string, string> = {};
+      const slotsToUpload: SlotKey[] = isDigital ? ["front", "selfie"] : ["front", "back", "selfie"];
+      const updates: Record<string, string | null> = {};
 
-      for (const slot of Object.keys(SLOT_CONFIG) as SlotKey[]) {
+      for (const slot of slotsToUpload) {
         const file = files[slot];
         if (!file) continue; // nada novo selecionado nesse slot, mantém o caminho já enviado antes
         const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-        // Caminho fixo por usuário/slot (não usa timestamp): reenviar uma
-        // foto sempre sobrescreve a anterior no mesmo lugar (upsert: true).
+        // Caminho fixo por usuário/slot (não usa timestamp): reenviar um
+        // arquivo sempre sobrescreve o anterior no mesmo lugar (upsert: true).
         const path = `${userId}/${slot}.${ext}`;
+        const dbColumn = slot === "front" ? "document_front_path" : slot === "back" ? "document_back_path" : "selfie_path";
         const { error: uploadError } = await supabase.storage
           .from("verification-docs")
           .upload(path, file, { contentType: file.type || undefined, upsert: true });
         if (uploadError) {
-          throw new Error(`Não foi possível enviar "${SLOT_CONFIG[slot].label}": ${uploadError.message}`);
+          const label = slot === "front" ? "documento" : slot === "back" ? "verso do documento" : "selfie";
+          throw new Error(`Não foi possível enviar "${label}": ${uploadError.message}`);
         }
-        updates[SLOT_CONFIG[slot].dbColumn] = path;
+        updates[dbColumn] = path;
+      }
+
+      // Trocou pra "digital" agora (ou já estava): não faz sentido manter um
+      // verso antigo de uma tentativa anterior em "fisico" — limpa o campo
+      // pra não aparecer nada errado na revisão do admin.
+      if (isDigital) {
+        updates.document_back_path = null;
       }
 
       const { error: upsertError } = await supabase.from("profile_kyc").upsert(
         {
           profile_id: userId,
+          document_type: documentType,
           ...updates,
           submitted_at: new Date().toISOString(),
         },
@@ -141,7 +160,7 @@ export function VerificacaoForm({ userId, wasRejected, existing }: VerificacaoFo
       setFiles({ front: null, back: null, selfie: null });
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível enviar suas fotos. Tente novamente.");
+      setError(err instanceof Error ? err.message : "Não foi possível enviar seus arquivos. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -156,53 +175,159 @@ export function VerificacaoForm({ userId, wasRejected, existing }: VerificacaoFo
       )}
       {success && (
         <p className="rounded-lg border border-verde-tint-border bg-verde-tint p-3 text-sm text-verde">
-          Fotos enviadas. Um moderador vai analisar em breve.
+          Enviado. Um moderador vai analisar em breve.
         </p>
       )}
 
-      {(Object.keys(SLOT_CONFIG) as SlotKey[]).map((slot) => {
-        const config = SLOT_CONFIG[slot];
-        return (
-          <div key={slot}>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
-              {config.label} <span className="text-dourado-dark">(obrigatória)</span>
-            </label>
-            <p className="mb-2 text-[12.5px] text-[#8A8F98]">{config.hint}</p>
-            <div className="flex items-center gap-3">
-              {previews[slot] ? (
-                <img
-                  src={previews[slot] ?? undefined}
-                  alt={config.label}
-                  className="h-20 w-20 rounded-lg border border-sand-300 object-cover"
-                />
-              ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-sand-400 text-center text-[10px] text-[#8A8F98]">
-                  Sem foto
-                </div>
-              )}
-              <label className="cursor-pointer rounded-lg border border-sand-400 px-3 py-2 text-xs font-semibold text-obsidian-900 transition-colors hover:border-dourado hover:text-dourado">
-                {previews[slot] ? "Trocar foto" : "Enviar foto"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture={config.capture}
-                  onChange={(e) => handleFileChange(slot, e)}
-                  className="hidden"
-                />
-              </label>
-            </div>
-            {fieldErrors[slot] && <p className="mt-1.5 text-xs text-crimson">{fieldErrors[slot]}</p>}
-          </div>
-        );
-      })}
+      <div>
+        <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+          Tipo de documento
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => handleDocumentTypeChange("fisico")}
+            className={`rounded-lg border px-3.5 py-2.5 text-[12.5px] font-semibold transition-colors ${
+              !isDigital
+                ? "border-dourado bg-dourado-tint text-dourado-dark"
+                : "border-sand-400 text-[#5B6470] hover:border-obsidian-900 hover:text-obsidian-900"
+            }`}
+          >
+            Documento físico (frente e verso)
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDocumentTypeChange("digital")}
+            className={`rounded-lg border px-3.5 py-2.5 text-[12.5px] font-semibold transition-colors ${
+              isDigital
+                ? "border-dourado bg-dourado-tint text-dourado-dark"
+                : "border-sand-400 text-[#5B6470] hover:border-obsidian-900 hover:text-obsidian-900"
+            }`}
+          >
+            CNH Digital, RG Digital ou documento único (PDF)
+          </button>
+        </div>
+        <p className="mt-2 text-[12px] font-normal text-[#8A8F98]">
+          Se o seu documento já vem como um PDF ou uma imagem única com tudo (ex.: CNH Digital ou
+          RG Digital), escolha a segunda opção — não precisa separar frente e verso.
+        </p>
+      </div>
+
+      <DocSlot
+        slotKey="front"
+        label={FRONT_LABELS[documentType].label}
+        hint={FRONT_LABELS[documentType].hint}
+        accept={isDigital ? "image/*,application/pdf" : "image/*"}
+        capture={isDigital ? undefined : "environment"}
+        file={files.front}
+        previewUrl={previews.front}
+        error={fieldErrors.front}
+        onChange={(e) => handleFileChange("front", e)}
+      />
+
+      {!isDigital && (
+        <DocSlot
+          slotKey="back"
+          label="Documento (verso)"
+          hint="O mesmo documento, lado de trás."
+          accept="image/*"
+          capture="environment"
+          file={files.back}
+          previewUrl={previews.back}
+          error={fieldErrors.back}
+          onChange={(e) => handleFileChange("back", e)}
+        />
+      )}
+
+      <DocSlot
+        slotKey="selfie"
+        label="Selfie"
+        hint="Uma foto sua, de rosto, tirada na hora (abra a câmera frontal)."
+        accept="image/*"
+        capture="user"
+        file={files.selfie}
+        previewUrl={previews.selfie}
+        error={fieldErrors.selfie}
+        onChange={(e) => handleFileChange("selfie", e)}
+      />
 
       <button
         type="submit"
         disabled={loading}
         className="w-full rounded-lg bg-obsidian-900 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:opacity-50 hover:bg-dourado hover:text-obsidian-900"
       >
-        {loading ? "Enviando..." : wasRejected ? "Reenviar fotos" : "Enviar fotos para análise"}
+        {loading ? "Enviando..." : wasRejected ? "Reenviar" : "Enviar para análise"}
       </button>
     </form>
+  );
+}
+
+function DocSlot({
+  slotKey,
+  label,
+  hint,
+  accept,
+  capture,
+  file,
+  previewUrl,
+  error,
+  onChange,
+}: {
+  slotKey: SlotKey;
+  label: string;
+  hint: string;
+  accept: string;
+  capture?: "environment" | "user";
+  file: File | null;
+  previewUrl: string | null;
+  error: string | null;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const isPdf = looksLikePdf(file, previewUrl);
+
+  return (
+    <div>
+      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+        {label} <span className="text-dourado-dark">(obrigatória)</span>
+      </label>
+      <p className="mb-2 text-[12.5px] text-[#8A8F98]">{hint}</p>
+      <div className="flex items-center gap-3">
+        {previewUrl ? (
+          isPdf ? (
+            <a
+              href={previewUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-sand-300 bg-sand text-center text-[10px] font-medium text-[#5B6470]"
+            >
+              <span className="text-lg">📄</span>
+              PDF anexado
+            </a>
+          ) : (
+            <img
+              src={previewUrl}
+              alt={label}
+              className="h-20 w-20 rounded-lg border border-sand-300 object-cover"
+            />
+          )
+        ) : (
+          <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-sand-400 text-center text-[10px] text-[#8A8F98]">
+            Sem arquivo
+          </div>
+        )}
+        <label className="cursor-pointer rounded-lg border border-sand-400 px-3 py-2 text-xs font-semibold text-obsidian-900 transition-colors hover:border-dourado hover:text-dourado">
+          {previewUrl ? "Trocar arquivo" : "Enviar arquivo"}
+          <input
+            key={slotKey}
+            type="file"
+            accept={accept}
+            capture={capture}
+            onChange={onChange}
+            className="hidden"
+          />
+        </label>
+      </div>
+      {error && <p className="mt-1.5 text-xs text-crimson">{error}</p>}
+    </div>
   );
 }
