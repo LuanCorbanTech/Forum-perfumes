@@ -116,16 +116,16 @@ export async function Navbar() {
               </button>
             </form>
           ) : (
-            <div className="flex shrink-0 items-center gap-2.5">
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
               <Link
                 href="/login?modo=cadastro"
-                className="hidden rounded-md border border-dourado/40 px-4 py-[9px] text-[11px] font-semibold uppercase tracking-[0.02em] text-dourado transition-colors hover:border-dourado hover:bg-dourado/10 min-[560px]:inline-block"
+                className="inline-block whitespace-nowrap rounded-md border border-dourado/40 px-2.5 py-[9px] text-[10px] font-semibold uppercase tracking-[0.02em] text-dourado transition-colors hover:border-dourado hover:bg-dourado/10 sm:px-4 sm:text-[11px]"
               >
                 Cadastrar
               </Link>
               <Link
                 href="/login"
-                className="rounded-md bg-dourado px-4 py-[9px] text-[11px] font-semibold uppercase tracking-[0.02em] text-obsidian-900 transition-colors hover:bg-dourado-hover"
+                className="whitespace-nowrap rounded-md bg-dourado px-2.5 py-[9px] text-[10px] font-semibold uppercase tracking-[0.02em] text-obsidian-900 transition-colors hover:bg-dourado-hover sm:px-4 sm:text-[11px]"
               >
                 Entrar
               </Link>
