@@ -4,6 +4,8 @@ import type { Profile, ProfileKyc } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 import { ensureCorrectContentType } from "@/app/admin/cadastros/actions";
 import { PhotoSlot } from "@/components/admin/PhotoSlot";
+import { PromoteAdminButton } from "@/components/admin/PromoteAdminButton";
+import { EditCredentialsForm } from "@/components/admin/EditCredentialsForm";
 
 // Documento e selfie continuam guardados mesmo depois do cadastro
 // aprovado (nunca são apagados) — esta tela existe justamente pra dar ao
@@ -80,7 +82,17 @@ export default async function AdminUsuarioDocumentosPage({
           {profile.email && <>{profile.email} · </>}
           {kyc?.cpf && <>CPF {kyc.cpf} · </>}
           Status: {STATUS_LABELS[profile.approval_status] ?? profile.approval_status}
+          {profile.is_admin && <> · Administrador</>}
         </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2.5">
+        {!profile.is_admin && <PromoteAdminButton userId={profile.id} fullName={profile.full_name} />}
+        <EditCredentialsForm
+          userId={profile.id}
+          currentEmail={profile.email}
+          currentUsername={profile.username}
+        />
       </div>
 
       {kyc ? (
