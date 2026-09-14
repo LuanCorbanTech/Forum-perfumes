@@ -63,6 +63,11 @@ export interface Profile {
   trust_score: number;
   is_admin: boolean;
   is_banned: boolean;
+  // true = a suspensão atual (is_banned) veio automaticamente de uma
+  // denúncia ainda não decidida pela moderação (migration_014) — não é
+  // um banimento manual do admin. Usado só pra mostrar um aviso
+  // diferente ("suspenso, denúncia em análise" em vez de "banido").
+  auto_suspended: boolean;
   banned_reason: string | null;
   banned_at: string | null;
   approval_status: ApprovalStatus;
@@ -88,6 +93,10 @@ export interface ProfileKyc {
   document_back_path: string | null;
   selfie_path: string | null;
   submitted_at: string | null;
+  // Data/hora em que a pessoa marcou "Li e aceito a Política de
+  // Privacidade e os Termos de Uso" (migration_013) — comprovante de
+  // consentimento exigido pela LGPD (art. 8º).
+  terms_accepted_at: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -102,7 +102,9 @@ export default async function PerfilPage({ params }: Props) {
               )}
               {profile.is_banned && (
                 <span className="rounded-full border border-crimson-tint-border bg-crimson-tint px-3 py-1 text-[10.5px] font-semibold text-crimson">
-                  Usuário banido por violar as regras da comunidade
+                  {profile.auto_suspended
+                    ? "Perfil suspenso — denúncia em análise pela moderação"
+                    : "Usuário banido por violar as regras da comunidade"}
                 </span>
               )}
             </div>

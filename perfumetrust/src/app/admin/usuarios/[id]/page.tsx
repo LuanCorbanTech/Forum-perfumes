@@ -2,8 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Profile, ProfileKyc } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
-import { ensureCorrectContentType } from "@/app/admin/cadastros/actions";
-import { PhotoSlot } from "@/components/admin/PhotoSlot";
+import { DownloadDocButton } from "@/components/admin/DownloadDocButton";
 import { PromoteAdminButton } from "@/components/admin/PromoteAdminButton";
 import { EditCredentialsForm } from "@/components/admin/EditCredentialsForm";
 
@@ -13,6 +12,8 @@ import { EditCredentialsForm } from "@/components/admin/EditCredentialsForm";
 // levar à polícia por causa de uma fraude. Antes desta página, os
 // documentos só apareciam em /admin/cadastros, que some da lista assim
 // que o cadastro é aprovado.
+// `download: true` faz o link já vir com Content-Disposition: attachment
+// (ver DownloadDocButton.tsx) — o admin baixa em vez de exibir aqui.
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24; // 24h
 
 async function signedUrl(
@@ -20,7 +21,9 @@ async function signedUrl(
   path: string | null
 ): Promise<string | null> {
   if (!path) return null;
-  const { data } = await supabase.storage.from("verification-docs").createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+  const { data } = await supabase.storage
+    .from("verification-docs")
+    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS, { download: true });
   return data?.signedUrl ?? null;
 }
 
@@ -46,15 +49,6 @@ export default async function AdminUsuarioDocumentosPage({
     .select("*")
     .eq("profile_id", id)
     .maybeSingle<ProfileKyc>();
-
-  // Corrige sozinho, na hora, qualquer foto que ainda tenha o Content-Type
-  // errado (ícone quebrado) antes de gerar os links — sem precisar de
-  // nenhum botão de manutenção manual.
-  await ensureCorrectContentType([
-    kyc?.document_front_path ?? null,
-    kyc?.document_back_path ?? null,
-    kyc?.selfie_path ?? null,
-  ]);
 
   const [frontUrl, backUrl, selfieUrl] = await Promise.all([
     signedUrl(supabase, kyc?.document_front_path ?? null),
@@ -97,13 +91,12 @@ export default async function AdminUsuarioDocumentosPage({
 
       {kyc ? (
         <div className={`grid gap-3 ${isDigital ? "grid-cols-2" : "grid-cols-3"} max-w-2xl`}>
-          <PhotoSlot
+          <DownloadDocButton
             label={isDigital ? "Documento (PDF/único)" : "Documento (frente)"}
             url={frontUrl}
-            heightClassName="h-32"
           />
-          {!isDigital && <PhotoSlot label="Documento (verso)" url={backUrl} heightClassName="h-32" />}
-          <PhotoSlot label="Selfie" url={selfieUrl} heightClassName="h-32" />
+          {!isDigital && <DownloadDocButton label="Documento (verso)" url={backUrl} />}
+          <DownloadDocButton label="Selfie" url={selfieUrl} />
         </div>
       ) : (
         <p className="text-[13px] font-normal italic text-[#8A8F98]">

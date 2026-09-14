@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { SignupReviewActions } from "@/components/admin/SignupReviewActions";
-import { PhotoSlot } from "@/components/admin/PhotoSlot";
-import { ensureCorrectContentType } from "./actions";
+import { DownloadDocButton } from "@/components/admin/DownloadDocButton";
 import type { Profile, ProfileKyc } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -15,12 +14,15 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: "Recusado",
 };
 
-// Assina uma URL temporária pro admin ver a foto enviada — o bucket
-// "verification-docs" é privado (ver migration_007), então getPublicUrl
-// não funciona aqui. O ARQUIVO em si nunca expira nem some do bucket;
-// só o LINK de visualização tem validade, e ela é gerada de novo (com
-// mais tempo) toda vez que esta página é aberta ou atualizada, então o
-// admin nunca fica sem conseguir ver a foto por ter demorado a revisar.
+// Assina uma URL temporária pro admin baixar o documento/selfie enviado
+// — o bucket "verification-docs" é privado (ver migration_007), então
+// getPublicUrl não funciona aqui. O ARQUIVO em si nunca expira nem some
+// do bucket; só o LINK tem validade, e ela é gerada de novo (com mais
+// tempo) toda vez que esta página é aberta ou atualizada, então o admin
+// nunca fica sem conseguir baixar por ter demorado a revisar.
+// `download: true` faz o Storage devolver o link já com
+// Content-Disposition: attachment — o navegador baixa em vez de abrir a
+// foto ali mesmo (ver DownloadDocButton.tsx).
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24; // 24h
 
 async function signedUrl(
@@ -28,7 +30,9 @@ async function signedUrl(
   path: string | null
 ): Promise<string | null> {
   if (!path) return null;
-  const { data } = await supabase.storage.from("verification-docs").createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+  const { data } = await supabase.storage
+    .from("verification-docs")
+    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS, { download: true });
   return data?.signedUrl ?? null;
 }
 
@@ -63,14 +67,6 @@ export default async function AdminCadastrosPage() {
     (profiles ?? []).map(async (profile) => {
       const kyc = kycByProfile.get(profile.id) ?? null;
       const documentType = kyc?.document_type ?? "fisico";
-
-      // Corrige sozinho qualquer foto com Content-Type errado (ícone
-      // quebrado) antes de gerar os links — sem precisar de botão manual.
-      await ensureCorrectContentType([
-        kyc?.document_front_path ?? null,
-        kyc?.document_back_path ?? null,
-        kyc?.selfie_path ?? null,
-      ]);
 
       const [frontUrl, backUrl, selfieUrl] = await Promise.all([
         signedUrl(supabase, kyc?.document_front_path ?? null),
@@ -135,12 +131,12 @@ export default async function AdminCadastrosPage() {
 
               {submitted ? (
                 <div className={`mt-4 grid gap-3 ${documentType === "digital" ? "grid-cols-2" : "grid-cols-3"}`}>
-                  <PhotoSlot
+                  <DownloadDocButton
                     label={documentType === "digital" ? "Documento (PDF/único)" : "Documento (frente)"}
                     url={frontUrl}
                   />
-                  {documentType === "fisico" && <PhotoSlot label="Documento (verso)" url={backUrl} />}
-                  <PhotoSlot label="Selfie" url={selfieUrl} />
+                  {documentType === "fisico" && <DownloadDocButton label="Documento (verso)" url={backUrl} />}
+                  <DownloadDocButton label="Selfie" url={selfieUrl} />
                 </div>
               ) : (
                 <p className="mt-4 text-[13px] font-normal italic text-[#8A8F98]">

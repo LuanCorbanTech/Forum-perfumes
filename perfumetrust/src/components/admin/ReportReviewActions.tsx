@@ -36,6 +36,12 @@ export function ReportReviewActions({ reportId }: { reportId: string }) {
           {error}
         </p>
       )}
+      <p className="text-[11.5px] font-normal italic text-[#8A8F98]">
+        O perfil denunciado já está suspenso automaticamente até esta decisão (migration_014). Rejeitar
+        (improcedente) libera o perfil de novo, a não ser que exista outra denúncia pendente contra a
+        mesma pessoa; aprovar e marcar &quot;Banir&quot; abaixo transforma a suspensão num banimento
+        permanente.
+      </p>
       <textarea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}

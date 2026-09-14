@@ -11,13 +11,24 @@ export async function Navbar() {
   } = await supabase.auth.getUser();
 
   let profile: { full_name: string; is_admin: boolean; approval_status: ApprovalStatus } | null = null;
+  // Quantas transações do usuário logado ainda esperam a confirmação DELE
+  // (não importa se ele é comprador ou vendedor) — mostrado como uma
+  // bolinha no link "Transações" pra quem foi recomendado numa negociação
+  // descobrir isso sem precisar receber o link direto de ninguém.
+  let pendingConfirmCount = 0;
   if (user) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("full_name, is_admin, approval_status")
-      .eq("id", user.id)
-      .single();
+    const [{ data }, { data: openTx }] = await Promise.all([
+      supabase.from("profiles").select("full_name, is_admin, approval_status").eq("id", user.id).single(),
+      supabase
+        .from("transactions")
+        .select("buyer_id, seller_id, buyer_confirmed_at, seller_confirmed_at")
+        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+        .not("status", "in", "(completed,cancelled)"),
+    ]);
     profile = data;
+    pendingConfirmCount = (openTx ?? []).filter((t) =>
+      t.buyer_id === user.id ? !t.buyer_confirmed_at : !t.seller_confirmed_at
+    ).length;
   }
 
   const navLinkClass = "text-[#C9CDD3] transition-colors hover:text-dourado";
@@ -91,6 +102,16 @@ export async function Navbar() {
           {user && (
             <Link href={`/perfil/${user.id}`} className={`hidden min-[880px]:inline ${navLinkClass}`}>
               Perfil
+            </Link>
+          )}
+          {user && (
+            <Link href="/transacoes" className={`hidden min-[880px]:inline-flex items-center gap-1.5 ${navLinkClass}`}>
+              Transações
+              {pendingConfirmCount > 0 && (
+                <span className="grid h-[17px] min-w-[17px] place-items-center rounded-full bg-crimson px-1 text-[9.5px] font-semibold leading-none text-white">
+                  {pendingConfirmCount}
+                </span>
+              )}
             </Link>
           )}
           <Link href="/autenticidade" className={`hidden min-[880px]:inline ${navLinkClass}`}>

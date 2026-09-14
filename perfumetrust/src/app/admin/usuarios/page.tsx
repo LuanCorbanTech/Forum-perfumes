@@ -110,7 +110,7 @@ export default async function AdminUsuariosPage({ searchParams }: Props) {
                 <td className="px-4 py-3">
                   {user.is_banned ? (
                     <span className="rounded-full border border-crimson-tint-border bg-crimson-tint px-2 py-0.5 text-[11px] font-medium text-crimson">
-                      Banido
+                      {user.auto_suspended ? "Suspenso (denúncia)" : "Banido"}
                     </span>
                   ) : (
                     <span className="rounded-full border border-verde-tint-border bg-verde-tint px-2 py-0.5 text-[11px] font-medium text-verde">

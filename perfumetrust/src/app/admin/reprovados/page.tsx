@@ -1,13 +1,14 @@
 import type { RejectedSignup } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
-import { ensureCorrectContentType } from "@/app/admin/cadastros/actions";
-import { PhotoSlot } from "@/components/admin/PhotoSlot";
+import { DownloadDocButton } from "@/components/admin/DownloadDocButton";
 
 // Arquivo só de consulta (migration_012): quando um cadastro é recusado,
 // a conta ativa é apagada de verdade (pra liberar CPF/telefone/e-mail pra
 // um cadastro novo) — o que fica aqui é só uma cópia dos dados e
 // documentos enviados, pra você lembrar/explicar o motivo depois. Não dá
 // pra aprovar ou reverter nada direto desta tela.
+// `download: true` faz o link já vir com Content-Disposition: attachment
+// (ver DownloadDocButton.tsx) — o admin baixa em vez de exibir aqui.
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24; // 24h
 
 async function signedUrl(
@@ -15,7 +16,9 @@ async function signedUrl(
   path: string | null
 ): Promise<string | null> {
   if (!path) return null;
-  const { data } = await supabase.storage.from("verification-docs").createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+  const { data } = await supabase.storage
+    .from("verification-docs")
+    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS, { download: true });
   return data?.signedUrl ?? null;
 }
 
@@ -30,10 +33,6 @@ export default async function AdminReprovadosPage() {
 
   const entries = await Promise.all(
     (rows ?? []).map(async (row) => {
-      // Corrige sozinho qualquer foto com Content-Type errado (ícone
-      // quebrado) antes de gerar os links — sem precisar de botão manual.
-      await ensureCorrectContentType([row.document_front_path, row.document_back_path, row.selfie_path]);
-
       const [frontUrl, backUrl, selfieUrl] = await Promise.all([
         signedUrl(supabase, row.document_front_path),
         signedUrl(supabase, row.document_back_path),
@@ -88,12 +87,12 @@ export default async function AdminReprovadosPage() {
               )}
 
               <div className={`mt-4 grid gap-3 ${row.document_type === "digital" ? "grid-cols-2" : "grid-cols-3"}`}>
-                <PhotoSlot
+                <DownloadDocButton
                   label={row.document_type === "digital" ? "Documento (PDF/único)" : "Documento (frente)"}
                   url={frontUrl}
                 />
-                {row.document_type !== "digital" && <PhotoSlot label="Documento (verso)" url={backUrl} />}
-                <PhotoSlot label="Selfie" url={selfieUrl} />
+                {row.document_type !== "digital" && <DownloadDocButton label="Documento (verso)" url={backUrl} />}
+                <DownloadDocButton label="Selfie" url={selfieUrl} />
               </div>
 
               {row.notes && (
