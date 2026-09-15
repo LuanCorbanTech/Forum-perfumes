@@ -6,6 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 import { resolveContentType } from "@/lib/storageContentType";
 import { convertHeicIfNeeded } from "@/lib/convertHeic";
 import { DocSlot } from "@/components/DocSlot";
+import { DocumentModal } from "@/components/DocumentModal";
+import { PrivacyPolicyContent } from "@/components/PrivacyPolicyContent";
+import { TermsOfUseContent } from "@/components/TermsOfUseContent";
+import { recordVerificationConsent } from "@/app/conta/verificacao/actions";
 import type { DocumentType } from "@/lib/types";
 
 // Documentos/selfies costumam pesar mais que um avatar comum, então o
@@ -66,6 +70,18 @@ export function VerificacaoForm({ userId, wasRejected, existing }: VerificacaoFo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // Consentimento LGPD (migration_013): pedido de novo a cada reenvio de
+  // documento/selfie (ex.: depois de uma recusa) — não reaproveita um
+  // aceite anterior, já que são arquivos novos sendo enviados.
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  // Mostra a Política de Privacidade ou os Termos de Uso num modal por
+  // cima desta mesma tela (em vez de abrir /privacidade ou /termos numa
+  // aba nova) — ver DocumentModal.tsx.
+  const [openDoc, setOpenDoc] = useState<null | "privacidade" | "termos">(null);
+  // Aviso (não bloqueante) se o registro de IP/horário do consentimento
+  // no servidor falhar — o envio principal já foi salvo, então isso
+  // nunca impede o sucesso, só avisa discretamente (ver actions.ts).
+  const [consentNotice, setConsentNotice] = useState<string | null>(null);
 
   const isDigital = documentType === "digital";
 
@@ -103,6 +119,7 @@ export function VerificacaoForm({ userId, wasRejected, existing }: VerificacaoFo
     e.preventDefault();
     setError(null);
     setSuccess(false);
+    setConsentNotice(null);
 
     if (!hasAll.front || !hasAll.selfie || (!isDigital && !hasAll.back)) {
       setError(
@@ -110,6 +127,10 @@ export function VerificacaoForm({ userId, wasRejected, existing }: VerificacaoFo
           ? "Envie o documento e a selfie para continuar."
           : "Envie as 3 fotos (documento frente, documento verso e selfie) para continuar."
       );
+      return;
+    }
+    if (!acceptedTerms) {
+      setError("Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.");
       return;
     }
 
@@ -149,13 +170,30 @@ export function VerificacaoForm({ userId, wasRejected, existing }: VerificacaoFo
           document_type: documentType,
           ...updates,
           submitted_at: new Date().toISOString(),
+          // Comprovante de consentimento LGPD (migration_013) — já
+          // validamos acima que acceptedTerms está marcado.
+          terms_accepted_at: new Date().toISOString(),
         },
         { onConflict: "profile_id" }
       );
       if (upsertError) throw new Error(upsertError.message);
 
+      // Registra IP + horário do servidor pro comprovante de consentimento
+      // (migration_016) — best-effort, igual ao aviso de e-mail em
+      // SignupReviewActions.tsx: se isso falhar, o envio principal (acima)
+      // já foi salvo, então só avisamos discretamente, sem bloquear.
+      try {
+        const consentResult = await recordVerificationConsent();
+        if (!consentResult.ok) {
+          setConsentNotice("Documentos enviados, mas não deu pra confirmar o registro do consentimento.");
+        }
+      } catch {
+        setConsentNotice("Documentos enviados, mas não deu pra confirmar o registro do consentimento.");
+      }
+
       setSuccess(true);
       setFiles({ front: null, back: null, selfie: null });
+      setAcceptedTerms(false);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível enviar seus arquivos. Tente novamente.");
@@ -174,6 +212,11 @@ export function VerificacaoForm({ userId, wasRejected, existing }: VerificacaoFo
       {success && (
         <p className="rounded-lg border border-verde-tint-border bg-verde-tint p-3 text-sm text-verde">
           Enviado. Um moderador vai analisar em breve.
+        </p>
+      )}
+      {consentNotice && (
+        <p className="rounded-lg border border-dourado-tint-border bg-dourado-tint p-3 text-sm text-dourado-dark">
+          {consentNotice}
         </p>
       )}
 
@@ -249,10 +292,56 @@ export function VerificacaoForm({ userId, wasRejected, existing }: VerificacaoFo
         onChange={(e) => handleFileChange("selfie", e)}
       />
 
+      <label className="flex cursor-pointer items-start gap-2.5">
+        <input
+          type="checkbox"
+          checked={acceptedTerms}
+          onChange={(e) => setAcceptedTerms(e.target.checked)}
+          required
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-sand-400 text-dourado focus:ring-dourado"
+        />
+        <span className="text-[12.5px] font-normal leading-relaxed text-[#5B6470]">
+          Li e concordo com os{" "}
+          <button
+            type="button"
+            onClick={() => setOpenDoc("termos")}
+            className="border-b border-dourado-tint-border text-dourado-dark"
+          >
+            Termos de Uso
+          </button>{" "}
+          e a{" "}
+          <button
+            type="button"
+            onClick={() => setOpenDoc("privacidade")}
+            className="border-b border-dourado-tint-border text-dourado-dark"
+          >
+            Política de Privacidade
+          </button>
+          . Autorizo a coleta e o tratamento do meu documento de identidade e da minha selfie para
+          as finalidades exclusivas de validação de identidade e prevenção à fraude, conforme o
+          art. 7º, IX e art. 11, II, &quot;g&quot; da LGPD.
+        </span>
+      </label>
+      {openDoc === "privacidade" && (
+        <DocumentModal onClose={() => setOpenDoc(null)}>
+          <PrivacyPolicyContent />
+        </DocumentModal>
+      )}
+      {openDoc === "termos" && (
+        <DocumentModal onClose={() => setOpenDoc(null)}>
+          <TermsOfUseContent />
+        </DocumentModal>
+      )}
+
       <button
         type="submit"
-        disabled={loading}
-        className="w-full rounded-lg bg-obsidian-900 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:opacity-50 hover:bg-dourado hover:text-obsidian-900"
+        disabled={loading || !acceptedTerms || !hasAll.front || !hasAll.selfie || !hasAll.back}
+        title={
+          !acceptedTerms || !hasAll.front || !hasAll.selfie || !hasAll.back
+            ? "Marque o consentimento e envie os documentos/selfie exigidos para continuar"
+            : undefined
+        }
+        className="w-full rounded-lg bg-obsidian-900 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 hover:bg-dourado hover:text-obsidian-900"
       >
         {loading ? "Enviando..." : wasRejected ? "Reenviar" : "Enviar para análise"}
       </button>

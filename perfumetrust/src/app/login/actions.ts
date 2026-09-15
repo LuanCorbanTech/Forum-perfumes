@@ -2,6 +2,8 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveContentType } from "@/lib/storageContentType";
+import { getClientIp } from "@/lib/getClientIp";
+import { CURRENT_TERMS_VERSION } from "@/lib/legalVersion";
 import type { DocumentType } from "@/lib/types";
 
 interface SignUpResult {
@@ -64,6 +66,7 @@ export async function signUpComDocumentos(formData: FormData): Promise<SignUpRes
   const inWhatsappGroup = formData.get("inWhatsappGroup") === "sim";
   const password = String(formData.get("password") ?? "");
   const documentType = (String(formData.get("documentType") ?? "fisico")) as DocumentType;
+  const acceptedTerms = formData.get("acceptedTerms") === "true";
 
   const frontFile = formData.get("front");
   const backFile = formData.get("back");
@@ -88,6 +91,12 @@ export async function signUpComDocumentos(formData: FormData): Promise<SignUpRes
   }
   if (!(selfieFile instanceof File) || selfieFile.size === 0) {
     return { ok: false, error: "Envie a selfie." };
+  }
+  // Reforço no servidor (defesa em profundidade): não confia só no
+  // checkbox desabilitar o botão no navegador — sem isso marcado, nem
+  // aqui a conta é criada.
+  if (!acceptedTerms) {
+    return { ok: false, error: "É necessário aceitar os Termos de Uso e a Política de Privacidade para continuar." };
   }
   for (const f of [frontFile, backFile, selfieFile]) {
     if (f instanceof File && f.size > MAX_PHOTO_BYTES) {
@@ -183,6 +192,13 @@ export async function signUpComDocumentos(formData: FormData): Promise<SignUpRes
       document_back_path: backPath,
       selfie_path: selfiePath,
       submitted_at: new Date().toISOString(),
+      // Comprovante de consentimento LGPD (migration_013/016) — já
+      // validamos acima que acceptedTerms é true antes de chegar aqui.
+      // Data/hora e IP são capturados aqui no servidor (não no
+      // navegador), por serem mais confiáveis como prova de consentimento.
+      terms_accepted_at: new Date().toISOString(),
+      ip_address: await getClientIp(),
+      terms_version: CURRENT_TERMS_VERSION,
     },
     { onConflict: "profile_id" }
   );

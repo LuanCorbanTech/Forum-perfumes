@@ -97,6 +97,14 @@ export interface ProfileKyc {
   // Privacidade e os Termos de Uso" (migration_013) — comprovante de
   // consentimento exigido pela LGPD (art. 8º).
   terms_accepted_at: string | null;
+  // IP de quem marcou esse aceite, capturado no servidor (migration_016)
+  // — mais um elemento de comprovação de consentimento, junto com
+  // terms_accepted_at.
+  ip_address: string | null;
+  // Versão do texto dos Termos/Política aceito nesse momento (migration_017,
+  // ver src/lib/legalVersion.ts) — para saber, se o texto mudar no futuro,
+  // qual versão cada pessoa concordou de fato.
+  terms_version: number | null;
   created_at: string;
   updated_at: string;
 }

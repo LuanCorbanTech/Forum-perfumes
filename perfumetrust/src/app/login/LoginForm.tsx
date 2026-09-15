@@ -6,6 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DocSlot } from "@/components/DocSlot";
 import { convertHeicIfNeeded } from "@/lib/convertHeic";
+import { DocumentModal } from "@/components/DocumentModal";
+import { PrivacyPolicyContent } from "@/components/PrivacyPolicyContent";
+import { TermsOfUseContent } from "@/components/TermsOfUseContent";
 import { signUpComDocumentos } from "./actions";
 import type { DocumentType } from "@/lib/types";
 
@@ -71,6 +74,15 @@ export function LoginForm() {
     back: null,
     selfie: null,
   });
+  // Consentimento LGPD (migration_013): precisa ser marcado de propósito
+  // pela pessoa antes de enviar documento/selfie — checado aqui e de novo
+  // no servidor (signUpComDocumentos), que também é quem grava a data/hora
+  // como comprovante.
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  // Mostra a Política de Privacidade ou os Termos de Uso num modal por
+  // cima desta mesma tela (em vez de abrir /privacidade ou /termos numa
+  // aba nova) — ver DocumentModal.tsx.
+  const [openDoc, setOpenDoc] = useState<null | "privacidade" | "termos">(null);
 
   // "Esqueci minha senha".
   const [forgotId, setForgotId] = useState("");
@@ -86,6 +98,17 @@ export function LoginForm() {
       : null
   );
   const [cadastroFeito, setCadastroFeito] = useState(false);
+
+  // Botão "Criar conta" só libera depois de marcar o consentimento E
+  // selecionar os 3 arquivos exigidos (2, se documento digital único) —
+  // antes disso ele fica desabilitado/acinzentado, em vez de só mostrar
+  // erro depois de clicar.
+  const cadastroDocumentoDigital = documentType === "digital";
+  const cadastroPronto =
+    acceptedTerms &&
+    !!docFiles.front &&
+    !!docFiles.selfie &&
+    (cadastroDocumentoDigital || !!docFiles.back);
 
   async function resolveEmail(loginInput: string): Promise<string | null> {
     const { data, error: rpcError } = await supabase.rpc("resolve_login_email", {
@@ -227,6 +250,10 @@ export function LoginForm() {
       setError("Envie a selfie.");
       return;
     }
+    if (!acceptedTerms) {
+      setError("Você precisa aceitar a Política de Privacidade e os Termos de Uso para continuar.");
+      return;
+    }
 
     setLoading(true);
 
@@ -239,6 +266,7 @@ export function LoginForm() {
     formData.set("inWhatsappGroup", inWhatsappGroup);
     formData.set("password", password);
     formData.set("documentType", documentType);
+    formData.set("acceptedTerms", acceptedTerms ? "true" : "false");
     formData.set("front", docFiles.front);
     if (docFiles.back) formData.set("back", docFiles.back);
     formData.set("selfie", docFiles.selfie);
@@ -574,6 +602,47 @@ export function LoginForm() {
                   onChange={(e) => handleDocFileChange("selfie", e)}
                 />
               </div>
+
+              <label className="mt-4 flex cursor-pointer items-start gap-2.5">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  required
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-sand-400 text-dourado focus:ring-dourado"
+                />
+                <span className="text-[12.5px] font-normal leading-relaxed text-[#5B6470]">
+                  Li e concordo com os{" "}
+                  <button
+                    type="button"
+                    onClick={() => setOpenDoc("termos")}
+                    className="border-b border-dourado-tint-border text-dourado-dark"
+                  >
+                    Termos de Uso
+                  </button>{" "}
+                  e a{" "}
+                  <button
+                    type="button"
+                    onClick={() => setOpenDoc("privacidade")}
+                    className="border-b border-dourado-tint-border text-dourado-dark"
+                  >
+                    Política de Privacidade
+                  </button>
+                  . Autorizo a coleta e o tratamento do meu documento de identidade e da minha
+                  selfie para as finalidades exclusivas de validação de identidade e prevenção à
+                  fraude, conforme o art. 7º, IX e art. 11, II, &quot;g&quot; da LGPD.
+                </span>
+              </label>
+              {openDoc === "privacidade" && (
+                <DocumentModal onClose={() => setOpenDoc(null)}>
+                  <PrivacyPolicyContent />
+                </DocumentModal>
+              )}
+              {openDoc === "termos" && (
+                <DocumentModal onClose={() => setOpenDoc(null)}>
+                  <TermsOfUseContent />
+                </DocumentModal>
+              )}
             </div>
 
             <div>
@@ -612,14 +681,15 @@ export function LoginForm() {
 
             <button
               type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-obsidian-900 py-3.5 text-[11.5px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:opacity-50 hover:bg-dourado hover:text-obsidian-900"
+              disabled={loading || !cadastroPronto}
+              title={!cadastroPronto ? "Marque o consentimento e envie os documentos/selfie exigidos para continuar" : undefined}
+              className="w-full rounded-lg bg-obsidian-900 py-3.5 text-[11.5px] font-semibold uppercase tracking-[0.02em] text-white transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:bg-dourado hover:text-obsidian-900"
             >
               {loading ? "Criando conta..." : "Criar conta"}
             </button>
 
             <p className="text-center text-[11.5px] font-normal leading-relaxed text-[#8A8F98]">
-              Ao continuar, você concorda com os{" "}
+              Ao continuar, você também concorda com os{" "}
               <a href="/termos" target="_blank" rel="noreferrer" className="border-b border-dourado-tint-border text-dourado-dark">
                 termos de uso
               </a>{" "}
