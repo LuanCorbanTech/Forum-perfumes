@@ -170,10 +170,15 @@ export async function signUpComDocumentos(formData: FormData): Promise<SignUpRes
     return path;
   }
 
-  const frontPath = await uploadSlot(frontFile, "front");
-  const backPath =
-    documentType === "fisico" && backFile instanceof File ? await uploadSlot(backFile, "back") : null;
-  const selfiePath = selfieFile instanceof File ? await uploadSlot(selfieFile, "selfie") : null;
+  // Sobe os 3 arquivos ao mesmo tempo (em vez de um atrás do outro) — com
+  // muita gente se cadastrando junto, isso evita que cada cadastro fique
+  // ocupando o servidor por mais tempo do que precisa esperando uploads
+  // que não dependem um do outro.
+  const [frontPath, backPath, selfiePath] = await Promise.all([
+    uploadSlot(frontFile, "front"),
+    documentType === "fisico" && backFile instanceof File ? uploadSlot(backFile, "back") : Promise.resolve(null),
+    selfieFile instanceof File ? uploadSlot(selfieFile, "selfie") : Promise.resolve(null),
+  ]);
 
   if (!frontPath || !selfiePath || (documentType === "fisico" && !backPath)) {
     // Não deixa pra trás uma conta sem documento nenhum — desfaz tudo e
