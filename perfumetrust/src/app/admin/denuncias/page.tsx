@@ -17,6 +17,24 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: "Improcedente",
 };
 
+// Assina uma URL temporária pro admin baixar a foto anexada na denúncia
+// (migration_015) — o bucket "report-evidence" é privado, então
+// getPublicUrl não funciona aqui. `download: true` já força o download
+// em vez de abrir a imagem na aba (mesmo padrão usado nos documentos de
+// verificação — ver DownloadDocButton.tsx).
+const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24; // 24h
+
+async function evidenceUrl(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  path: string | null
+): Promise<string | null> {
+  if (!path) return null;
+  const { data } = await supabase.storage
+    .from("report-evidence")
+    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS, { download: true });
+  return data?.signedUrl ?? null;
+}
+
 export default async function AdminDenunciasPage() {
   const supabase = await createClient();
 
@@ -26,6 +44,13 @@ export default async function AdminDenunciasPage() {
     .order("status", { ascending: true }) // pending primeiro (ordem alfabética coloca pending antes)
     .order("created_at", { ascending: false })
     .returns<Report[]>();
+
+  const photoUrls = new Map<string, string>();
+  for (const report of reports ?? []) {
+    if (!report.photo_path) continue;
+    const url = await evidenceUrl(supabase, report.photo_path);
+    if (url) photoUrls.set(report.id, url);
+  }
 
   const pendentes = reports?.filter((r) => r.status === "pending").length ?? 0;
   const emAnalise = reports?.filter((r) => r.status === "under_review").length ?? 0;
@@ -80,6 +105,15 @@ export default async function AdminDenunciasPage() {
                   <span className="font-medium text-obsidian-900">Notas: </span>
                   {report.admin_notes}
                 </p>
+              )}
+
+              {report.photo_path && (
+                <a
+                  href={photoUrls.get(report.id) ?? "#"}
+                  className="mt-3.5 inline-flex items-center gap-1.5 rounded-lg border border-sand-300 bg-sand px-3 py-2 text-[12px] font-semibold text-[#3C434C] transition-colors hover:border-dourado hover:text-dourado-dark"
+                >
+                  <span aria-hidden="true">⬇</span> Baixar foto anexada
+                </a>
               )}
 
               {report.status === "pending" && <ReportReviewActions reportId={report.id} />}

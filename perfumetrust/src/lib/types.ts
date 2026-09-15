@@ -155,6 +155,10 @@ export interface Report {
   transaction_id: string | null;
   reason: ReportReason;
   description: string;
+  // Caminho no bucket privado "report-evidence" (migration_015) — foto
+  // opcional anexada como prova ao denunciar. Só o denunciante e admins
+  // conseguem gerar uma URL assinada pra ver (mesma regra da denúncia).
+  photo_path: string | null;
   status: ReportStatus;
   reviewed_by: string | null;
   reviewed_at: string | null;

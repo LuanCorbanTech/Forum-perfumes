@@ -14,14 +14,35 @@ interface Props {
   myApprovalStatus: ApprovalStatus;
 }
 
+// Print de conversa, foto do produto errado/falsificado recebido, etc. —
+// prova opcional que deixa a análise do admin bem mais objetiva do que só
+// a palavra de quem denunciou. Vai pro bucket privado "report-evidence"
+// (migration_015): só o próprio denunciante e admins conseguem ver, nunca
+// o denunciado (mesma regra de privacidade da denúncia em si).
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5MB
+
 export function ReportForm({ reportedId, reportedName, transactionId, currentUserId, myApprovalStatus }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const [reason, setReason] = useState<ReportReason>("golpe");
   const [description, setDescription] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setPhotoError(null);
+    if (file && file.size > MAX_PHOTO_BYTES) {
+      setPhotoError("A foto precisa ter até 5MB.");
+      setPhoto(null);
+      e.target.value = "";
+      return;
+    }
+    setPhoto(file);
+  }
 
   // O banco (migration_003) já recusa a inserção se o denunciante não
   // estiver aprovado — isso aqui só evita que a pessoa esbarre num erro
@@ -40,12 +61,28 @@ export function ReportForm({ reportedId, reportedName, transactionId, currentUse
     setLoading(true);
     setError(null);
 
+    let photoPath: string | null = null;
+    if (photo) {
+      const ext = photo.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${currentUserId}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("report-evidence")
+        .upload(path, photo, { contentType: photo.type || undefined });
+      if (uploadError) {
+        setLoading(false);
+        setError(`Não foi possível enviar a foto: ${uploadError.message}`);
+        return;
+      }
+      photoPath = path;
+    }
+
     const { error } = await supabase.from("reports").insert({
       reporter_id: currentUserId,
       reported_id: reportedId,
       transaction_id: transactionId ?? null,
       reason,
       description: description.trim(),
+      photo_path: photoPath,
     });
 
     setLoading(false);
@@ -105,6 +142,24 @@ export function ReportForm({ reportedId, reportedName, transactionId, currentUse
           className="w-full rounded-lg border border-sand-400 bg-white p-3 text-sm text-obsidian-900 placeholder-[#A0A5AC] focus:border-dourado focus:outline-none focus:ring-2 focus:ring-dourado/20"
           rows={4}
         />
+      </div>
+
+      <div>
+        <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.02em] text-[#8A8F98]">
+          Foto (opcional)
+        </label>
+        <p className="mb-2 text-[12px] font-normal text-[#8A8F98]">
+          Print da conversa, foto do produto errado/falsificado etc. — ajuda a moderação a decidir
+          mais rápido. Só você e a equipe de moderação conseguem ver esta foto.
+        </p>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handlePhotoChange}
+          className="w-full rounded-lg border border-sand-400 bg-white p-2 text-xs text-[#5B6470] file:mr-3 file:rounded file:border-0 file:bg-dourado file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-obsidian-900"
+        />
+        {photoError && <p className="mt-1 text-xs text-crimson">{photoError}</p>}
+        {photo && !photoError && <p className="mt-1 text-xs text-[#8A8F98]">Selecionado: {photo.name}</p>}
       </div>
 
       <button
